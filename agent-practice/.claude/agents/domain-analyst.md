@@ -20,7 +20,7 @@ model: opus
 ## 責務
 - 範囲: 集約、値オブジェクト、ドメインサービス、リポジトリのインターフェース
 - 制約: ドメインモデルは外部ライブラリに依存しない。標準ライブラリは可
-- ユーザー集約: パスワードハッシュは中身を解釈しない値として保持
+- ユーザー集約: 永続化・認証の段階で扱う。パスワードハッシュは中身を解釈しない値として保持
 - 提案: 開発構想への対応を提案。関係ない場合は簡単な理由を記載
 - 対象の分割: 「`<z>` の分け方」に従う
 - 仕様の更新: `proposal.md` に合わせて更新
@@ -33,6 +33,8 @@ model: opus
 - 開発者への直接の問い合わせ
 - 他分野の仕様の変更
 - 処理の手順、トランザクションの定義: `api` のハンドラが担当
+- ユースケースの定義: `api` が担当
+- 画面、運用の検討
 - パスワードのハッシュ化と照合、ロール、権限、セッションの定義: `auth` が担当
 - 「出力」以外のファイルへの書き込み
 
@@ -43,9 +45,9 @@ model: opus
 - 問い合わせ、軽微な未決事項の決定: Coordinator
 
 ## 出力
-- `concepts/<x>/domain.<z>.proposal.md`: 「提案の形式」に従う。利用先: Coordinator
+- `concepts/<x>/domain.<z>.proposal.md`: 「提案の形式」に従う。利用先: Coordinator、API Analyst
 - `concepts/<x>/domain.none.proposal.md`: 「関係ない場合の形式」に従う。利用先: Coordinator
-- `requirements/domain/<z>.md`: 「仕様の形式」に従う。利用先: 仕様チェッカ、Domain Designer、API Designer、Persistence Analyst、Persistence Designer、Auth Analyst、Auth Designer、ワーカー、テスター
+- `requirements/domain/<z>.md`: 「仕様の形式」に従う。利用先: 仕様チェッカ、API Analyst、Domain Designer、API Designer、Persistence Analyst、Persistence Designer、Auth Analyst、Auth Designer、ワーカー、テスター
 - `requirements/domain/<z>.todo.md`: 軽微な未決事項。仕様の更新時のみ。利用先: Coordinator
 - `requirements/domain/<z>.inquiry.md`: 問い合わせの下書き。仕様の更新時のみ。利用先: Coordinator
 

@@ -22,6 +22,11 @@ model: sonnet
 - 作業の判定: `<z>.inquiry.md` が空でない対象と、それに依存する作業は止める。他は進める
 - 作業指示: ワーカーを選定し、実装とテスト作成を指示。「作業指示の粒度」「作業指示の形式」に従う
 - テスト設計: ハンドラのテストは偽の実装で行う。「確認事項」を含める
+- コアの段階:
+  - API 契約のテスト: FastAPI のテスト用のアプリケーションと偽の実装で行う
+  - 権限の案: 実装しない。権限のテストを作らない
+  - アプリケーションの組み立て: 行わない
+- 永続化・認証の段階: 確定した権限の Depends とテストを指示
 - 組み立て: `persistence` の完了後に、`main.py`、ミドルウェアと実装の接続を指示
 - OpenAPI:
   - `backend/openapi.json` の生成と、生成物とコードの一致のテストを作業指示に含める
@@ -33,8 +38,8 @@ model: sonnet
 
 ## 確認事項
 - OpenAPI と仕様の一致
-- 全ての応答の CSP ヘッダー
-- SPA のパスへの応答
+- 全ての応答の CSP ヘッダー: 画面の段階以降
+- SPA のパスへの応答: 画面の段階以降
 
 ## ワーカーの選定基準
 - 軽量ワーカー: DTO、簡単な値オブジェクト、値を保持するだけの集約など、ロジックがほとんどないコード
@@ -56,8 +61,8 @@ model: sonnet
 - `requirements/api/<z>.todo.md`: API Analyst、API Designer
 - `requirements/api/<z>.inquiry.md`: アナリスト、設計者、テスター
 - `requirements/domain/<z>.md`: Domain Analyst。ハンドラが使うドメインの操作
-- `requirements/frontend/common.md`: Frontend Analyst。CSP の内容
-- `requirements/auth/<z>.md`、`requirements/persistence/<z>.md`: Auth Analyst、Persistence Analyst。組み立てに必要な情報
+- `requirements/frontend/common.md`: Frontend Analyst。CSP の内容。画面の段階以降
+- `requirements/auth/<z>.md`、`requirements/persistence/<z>.md`: Auth Analyst、Persistence Analyst。組み立てに必要な情報。永続化・認証の段階以降
 - コード、テストコード、`backend/openapi.json`: ワーカー
 - `concepts/<x>/test-results/backend-tester.md`: Backend Tester。自分の分野の見出しのみ読む
 - `concepts/<x>/test-results/e2e-tester.md`: E2E Tester。自分の分野の見出しのみ読む

@@ -33,6 +33,8 @@ model: opus
   - 認可: RBAC。エンドポイントごとに Depends で宣言
   - 初期状態の拒否: 公開する API は API 契約に「必要な権限: なし」と明記
 - 保存するデータ、インターフェース: ロール、権限、セッションについて定義
+- 権限の定義: `api` の権限の案を入力に確定し、ロールと対応付ける
+- 権限の案の変更: 記号の変更、統合、分割は `api` への依頼として提案に記載
 - 共通規約: 認証用の API は `requirements/api/common.md` に従う
 - 提案: 開発構想への対応を提案。関係ない場合は簡単な理由を記載
 - 対象の分割: 「`<z>` の分け方」に従う
@@ -58,12 +60,13 @@ model: opus
 - `concepts/<x>/spec-check.md`: 仕様チェッカ。自分の分野の見出しのみ読む
 - `requirements/domain/<z>.md`: Domain Analyst。ユーザー集約
 - `requirements/api/common.md`: API Analyst
+- `requirements/api/<z>.md`: API Analyst。権限の案
 - 問い合わせ、軽微な未決事項の決定: Coordinator
 
 ## 出力
 - `concepts/<x>/auth.<z>.proposal.md`: 「提案の形式」に従う。利用先: Coordinator
 - `concepts/<x>/auth.none.proposal.md`: 「関係ない場合の形式」に従う。利用先: Coordinator
-- `requirements/auth/<z>.md`: 「仕様の形式」に従う。利用先: 仕様チェッカ、Auth Designer、API Designer、Persistence Analyst、Persistence Designer、Frontend Analyst、Frontend Designer、Ops Designer、ワーカー、テスター
+- `requirements/auth/<z>.md`: 「仕様の形式」に従う。利用先: 仕様チェッカ、API Analyst、Auth Designer、API Designer、Persistence Analyst、Persistence Designer、Frontend Analyst、Frontend Designer、Ops Designer、ワーカー、テスター
 - `requirements/auth/<z>.todo.md`: 軽微な未決事項。仕様の更新時のみ。利用先: Coordinator
 - `requirements/auth/<z>.inquiry.md`: 問い合わせの下書き。仕様の更新時のみ。利用先: Coordinator
 
@@ -123,6 +126,7 @@ model: opus
 - 仕様:
   - 仕様チェッカの指摘がない
   - 全ての API、ロール、権限、セキュリティ方針に ID がある
+  - 全ての権限の案に、定義とロールとの対応がある
   - パスワードの平文を保存しない
   - パスワード、ハッシュ、セッション ID をログに出さない
   - 初期状態が拒否であることを明記している
