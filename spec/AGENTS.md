@@ -4,13 +4,6 @@
 - 短い単語・文で書く
 - 箇条書きで書く
 
-## 用語
-- エージェント間で使う用語は `rules/agent-glossary.md` の用語を使う
-- 未登録の用語は登録してから使う
-
-## ルール
-- エージェント・スキル用のルール: `rules/` 以下に作る
-
 ## 概要
 - 方式: 仕様駆動開発(SDD)
 - 土台: GitHub Spec Kit(`/speckit.*`)
@@ -58,16 +51,30 @@
 - 要件 ID: 例 `REQ-001-03`。設計・タスク・テストから参照
 
 ## 開発者とのやり取り
-- 会話: 日本語
-- PR: 要レビュー箇所へのリンクを付ける
+- 開発者に判断を求める事項には **記号付き番号**(`D10`, `D11` …、提案は `P1`, `P2` …)を付ける。
+  番号は `docs/agent-dev/decisions.md` の続きから採番し、後の回答とズレないようにする。
+- 会話は日本語。
+- PR でレビューが必要な箇所は、該当箇所へのリンクを付ける。
+
 
 ## 技術前提
 - バックエンド: Python、DDD
-- 永続化: PostgreSQL + SQLAlchemy
-- マイグレーション: Alembic
-- API: FastAPI + Pydantic v2
-- API 契約: OpenAPI(FastAPI の生成物を正とする。`/speckit.plan` の `contracts/` と突き合わせる)
-- 認証・認可: `Depends` で RBAC
+  - API: FastAPI + Pydantic v2
+  - API 契約: OpenAPI(FastAPI の生成物を正とする。`/speckit.plan` の `contracts/` と突き合わせる)
+  - 認証・認可: `Depends` で RBAC
+  - 永続化: PostgreSQL + SQLAlchemy
+  - マイグレーション: Alembic
+- `domain` 分野の制約
+  - 依存: 標準ライブラリのみ
+  - I/O: 書かない(ファイル、ネットワーク、DB)
+  - 現在時刻・乱数: ハンドラで取得し、引数で渡す
+- 過度な抽象化の禁止
+  - 標準の型・関数: 包まず、そのまま使う
+    - 例(これ以外も同様): `uuid`, `datetime`, `decimal`, `enum`, `pathlib`, `urllib.parse`, `re`
+    - 悪い例: `UUID` だけを持つ ID クラス、`datetime` だけを持つ日時クラス
+  - 独自の型を作る条件: 標準の型にない不変条件か振る舞いがある
+    - 良い例: 形式の制約がある番号、通貨付きの金額
+  - 迷ったら: 標準の型を使う
 - フロントエンド: TypeScript + React
 - UI フレームワーク: 開発ごとに統一。基本は Fluent UI
 
