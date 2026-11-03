@@ -31,7 +31,7 @@
 
 ## Notes
 
-- 未完了: REQ-001-18 の Q8(無効の機材の扱い)
-- Q8 は concept の方針どおり `/speckit.clarify` で決める
-- REQ-001-18 も、Q8 の決定後に受け入れシナリオを追加する
+- 未完了の項目: なし
+- Q8 は `/speckit.clarify` で決定済み
+- `spec-reviewer` の指摘 R1〜R15 を反映済み(D33〜D38、P10)
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
