@@ -34,7 +34,7 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 | AG-01 | `concept` スキル | スキル | trial | 高 | A | 題材1機能で concept.md を作り、使い勝手を確認 |
 | AG-02 | `spec-reviewer` エージェント | エージェント | trial | 高 | A | G1 前のレビューで指摘が出せること |
 | AG-03 | `manager` スキル(窓口のマネージャー機能) | スキル | trial | 高 | A | セッション開始時に状況把握→提案ができること |
-| AG-04 | Spec Kit の導入(`specify init --here --ai claude`) | 環境 | todo | 高 | A | `/speckit.*` が使える。plan 実行時に CLAUDE.md/AGENTS.md の自作部分が上書きされないか確認 |
+| AG-04 | Spec Kit の導入(`specify init --here --integration claude`) | 環境 | trial | 高 | A | `/speckit.*` が使える。plan 実行時に CLAUDE.md/AGENTS.md の自作部分が上書きされないか確認 |
 | AG-05 | constitution 作成(`/speckit.constitution`) | 仕様 | todo | 高 | A | DDD・OpenAPI・テスト先行・spec-anchored の原則を記載 |
 | AG-06 | `domain-model` スキル(specs/domain/ の作成・更新) | スキル | todo | 中 | A | 題材の plan 時に必要性を判断。不要なら hold |
 | AG-07 | `openapi-contract` スキル(生成・lint・ルート統合) | スキル | todo | 中 | B | G3 の前に OpenAPI を検証できる |
@@ -50,7 +50,7 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 
 | 機能 | concept | G1 要件 | G2 設計 | G3 API | G4 タスク | 実装 | PR |
 |---|---|---|---|---|---|---|---|
-| (題材)備品マスタの登録・一覧・編集 | - | - | - | - | - | - | - |
+| (題材)機材管理 | - | - | - | - | - | - | - |
 
 記入例: `済 2026-11-10`、`差戻し(理由)`。
 

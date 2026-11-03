@@ -8,3 +8,8 @@
 | D1 | 次の作業の順序 | P1(Spec Kit 導入)→ P2(constitution)→ P3(題材の concept) | 2026-11-04 |
 | D2 | AGENTS.md の未コミット変更 | Spec Kit 導入の前にコミットする | 2026-11-04 |
 | D3 | `docs/decisions.md` の作成 | 作成する(判断事項の記録先) | 2026-11-04 |
+| D4 | `specify init` の実行方法 | 開発者が手元で実行する。コマンドは `--integration claude`(`--ai` は廃止) | 2026-11-04 |
+| D5 | Spec Kit 導入分のコミット | 今コミットする | 2026-11-04 |
+| D6 | AG-05(constitution)の進め方 | 私が案を作り、開発者が承認する | 2026-11-04 |
+| D7 | API 契約の正 | FastAPI が生成する OpenAPI を正とする(AGENTS.md どおり) | 2026-11-04 |
+| D8 | 題材の名称 | 「機材管理」(旧: 備品マスタ) | 2026-11-04 |
