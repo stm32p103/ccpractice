@@ -1,7 +1,7 @@
 ---
-status: draft          # draft / frozen
+status: frozen         # draft / frozen
 created: 2026-11-04
-specified_as:          # /speckit.specify 後に機能フォルダ名
+specified_as: 001-equipment-ledger  # /speckit.specify 後に機能フォルダ名
 ---
 
 # 機材管理
