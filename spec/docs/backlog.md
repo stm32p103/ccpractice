@@ -56,5 +56,7 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 
 ## 引き継ぎメモ(新しいものを上に)
 
+- 2026-11-04: Spec Kit 導入(AG-04)と constitution v1.0.0(AG-05)を完了。どちらも trial。決定は D1〜D12(docs/decisions.md)。
+  次は AG-01(題材「機材管理」の concept 作成。新セッションで「機材管理の concept を作りたい」)→ `/speckit-specify`。詰まりなし。
 - 2026-11-03: ワークフロー初期構成を作成(AGENTS.md / concept / spec-reviewer / manager / バックログ)。
   次は AG-04(Spec Kit 導入)→ AG-01(題材の concept 作成)。
