@@ -1,50 +1,70 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# 機材管理 Constitution
+
+詳細な規約は `AGENTS.md` を正とする。本書は原則だけを定め、詳細を二重管理しない。
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 仕様駆動(spec-anchored)
+- 実装の前に、仕様(`specs/NNN-*/spec.md`)を書く。
+- 要件 ID(例 `REQ-001-03`)を、設計・タスク・テストから参照する。MUST。
+- 機能の完了後に、`specs/domain/` を最新に保つ(living spec)。MUST。
+- 理由: 仕様と実装のズレを防ぎ、変更の根拠を追えるようにする。
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. ドメインの純粋性(DDD)
+- `domain` が依存してよいのは、標準ライブラリだけ。MUST。
+- `domain` に I/O(ファイル・ネットワーク・DB)を書かない。MUST NOT。
+- 現在時刻と乱数は、ハンドラで取得し、引数で渡す。MUST。
+- 理由: ドメインのテストを、外部環境なしで確実に再現できるようにする。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. API 契約
+- FastAPI が生成する OpenAPI を正とする。MUST。
+- `/speckit.plan` の `contracts/` と突き合わせ、差分を解消してから先に進む。MUST。
+- 認証・認可は `Depends` による RBAC で行う。MUST。
+- 理由: 実装と契約を一致させ、手書きの契約が実装から乖離するのを防ぐ。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. テスト先行(譲れない原則)
+- テストを書き、失敗を確認してから実装する。MUST。
+- 契約テストで、実 API と OpenAPI を突き合わせる。MUST。
+- 理由: 要件を満たすことを、実装より先に検証可能な形にする。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. 過度な抽象化の禁止
+- 標準の型・関数(`uuid`, `datetime`, `decimal`, `enum`, `pathlib`, `re` など)は包まず、そのまま使う。MUST。
+- 独自の型を作るのは、標準の型にない不変条件か振る舞いがあるときだけ。
+- 迷ったら標準の型を使う。
+- 理由: 中身のない包み込みは、読む量だけを増やす。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### VI. センシティブなデータ
+- 次のものを外部(Web 検索・Web 取得・外部サービス)に送らない。MUST NOT。
+  - 秘密情報、環境変数の値、本番データ、個人情報
+  - 社内のホスト名、IP アドレス、ファイルパス
+- テストと試行には、ダミーのデータだけを使う。MUST。
+- 本番環境の障害解析は、開発者が対象を除去してから渡す。
+- 詳細は `AGENTS.md` の「センシティブなデータ」を参照する。
+- 理由: エージェントが読んだ内容は、API に送信される。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## 技術スタック
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- バックエンド: Python、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy、Alembic。
+- フロントエンド: TypeScript、React。UI フレームワークは開発ごとに統一し、基本は Fluent UI。
+- 詳細は `AGENTS.md` の「技術前提」を参照する。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## 開発フロー
+
+- 段階は 要件 → 設計 → API 契約 → タスク → 実装 → 検証 → 仕様同期 の順に進める。
+- ゲート(G1〜G4、PR)は、開発者の明示的な承認まで次に進まない。MUST。
+- 承認の記録は `docs/backlog.md` の「機能の進捗」に残す。
+- 開発者の判断事項には記号付き番号を付け、`docs/decisions.md` に記録する。
+- 詳細は `AGENTS.md` の「ワークフロー」を参照する。
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- 本書は、他の運用に優先する。
+- 改定は、開発者の承認を要する。改定の理由は Git の履歴に残す。
+- バージョンは意味づけに従う。
+  - MAJOR: 原則の削除、または互換性のない再定義
+  - MINOR: 原則・節の追加、または指針の大幅な拡張
+  - PATCH: 表現の修正、意味を変えない整理
+- 準拠の確認: PR のレビューで、各原則への準拠を確認する。違反には理由の説明を求める。
+- 実行時の指針は `AGENTS.md` を参照する。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-11-04 | **Last Amended**: 2026-11-04

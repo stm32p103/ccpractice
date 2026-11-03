@@ -35,7 +35,7 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 | AG-02 | `spec-reviewer` エージェント | エージェント | trial | 高 | A | G1 前のレビューで指摘が出せること |
 | AG-03 | `manager` スキル(窓口のマネージャー機能) | スキル | trial | 高 | A | セッション開始時に状況把握→提案ができること |
 | AG-04 | Spec Kit の導入(`specify init --here --integration claude`) | 環境 | trial | 高 | A | `/speckit.*` が使える。plan 実行時に CLAUDE.md/AGENTS.md の自作部分が上書きされないか確認 |
-| AG-05 | constitution 作成(`/speckit.constitution`) | 仕様 | todo | 高 | A | DDD・OpenAPI・テスト先行・spec-anchored の原則を記載 |
+| AG-05 | constitution 作成(`/speckit.constitution`) | 仕様 | trial | 高 | A | DDD・OpenAPI・テスト先行・spec-anchored の原則を記載 |
 | AG-06 | `domain-model` スキル(specs/domain/ の作成・更新) | スキル | todo | 中 | A | 題材の plan 時に必要性を判断。不要なら hold |
 | AG-07 | `openapi-contract` スキル(生成・lint・ルート統合) | スキル | todo | 中 | B | G3 の前に OpenAPI を検証できる |
 | AG-08 | `backend-impl` エージェント(Python+ORM、テスト先行) | エージェント | todo | 中 | B | G4 承認後・実装前に作成。BE フレームワーク / ORM の選定が前提(題材の最初の `/speckit.plan` 時に選定) |
