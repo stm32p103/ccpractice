@@ -31,17 +31,17 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 
 | ID | 内容 | 種類 | 状態 | 優先 | フェーズ | 完了条件 / メモ |
 |---|---|---|---|---|---|---|
-| AG-01 | `concept` スキル | スキル | trial | 高 | A | 題材1機能で concept.md を作り、使い勝手を確認 |
+| AG-01 | `concept` スキル | スキル | trial | 高 | A | 題材1機能で concept.md を作り、使い勝手を確認。機材管理で作成済み。使い勝手の評価は未記録 |
 | AG-02 | `spec-reviewer` エージェント | エージェント | trial | 高 | A | G1 前のレビューで指摘が出せること |
 | AG-03 | `manager` スキル(窓口のマネージャー機能) | スキル | trial | 高 | A | セッション開始時に状況把握→提案ができること |
 | AG-04 | Spec Kit の導入(`specify init --here --integration claude`) | 環境 | trial | 高 | A | `/speckit.*` が使える。plan 実行時に CLAUDE.md/AGENTS.md の自作部分が上書きされないか確認 |
 | AG-05 | constitution 作成(`/speckit.constitution`) | 仕様 | trial | 高 | A | DDD・OpenAPI・テスト先行・spec-anchored の原則を記載 |
 | AG-06 | `domain-model` スキル(specs/domain/ の作成・更新) | スキル | todo | 中 | A | 題材の plan 時に必要性を判断。不要なら hold |
 | AG-07 | `openapi-contract` スキル(生成・lint・ルート統合) | スキル | todo | 中 | B | G3 の前に OpenAPI を検証できる |
-| AG-08 | `backend-impl` エージェント(Python+ORM、テスト先行) | エージェント | todo | 中 | B | G4 承認後・実装前に作成。BE フレームワーク / ORM の選定が前提(題材の最初の `/speckit.plan` 時に選定) |
+| AG-08 | `backend-impl` エージェント(Python+ORM、テスト先行) | エージェント | todo | 中 | B | G4 承認後・実装前に作成。BE フレームワーク / ORM の選定が前提(題材の最初の `/speckit.plan` 時に選定)。全公開 API の認可設定(`Depends` で RBAC)。認可なしの API は一覧に明記(P7) |
 | AG-09 | `frontend-impl` エージェント | エージェント | todo | 中 | B | TypeScript + React + Fluent UI |
-| AG-10 | `contract-tester` エージェント(実APIとOpenAPIの突き合わせ) | エージェント | todo | 中 | B | |
-| AG-11 | `impl-reviewer` エージェント(仕様IDとの突き合わせ、別コンテキスト) | エージェント | todo | 中 | B | |
+| AG-10 | `contract-tester` エージェント(実APIとOpenAPIの突き合わせ) | エージェント | todo | 中 | B | 全公開 API で、権限のない役割の拒否をテスト(P7) |
+| AG-11 | `impl-reviewer` エージェント(仕様IDとの突き合わせ、別コンテキスト) | エージェント | todo | 中 | B | 全公開 API の認可設定(`Depends` で RBAC)。認可なしの API は一覧に明記(P7)を確認 |
 | AG-12 | `spec-sync` スキル(domain/・ルート索引への反映) | スキル | todo | 低 | C | 1機能目の完了時に作成 |
 | AG-13 | GitHub Copilot での動作確認(`.github/agents/`、skills) | 移植 | todo | 低 | A〜C | 同じ構成で使えるか確認 |
 | AG-14 | Spec Kit の extensions フックで自作スキルを起動できるか検証 | 検証 | todo | 低 | A | 結果で自動起動するかを決める |
@@ -50,12 +50,20 @@ Spec Kit の流れ(specify → clarify → plan → tasks → analyze)で、題�
 
 | 機能 | concept | G1 要件 | G2 設計 | G3 API | G4 タスク | 実装 | PR |
 |---|---|---|---|---|---|---|---|
-| (題材)機材管理 | - | - | - | - | - | - | - |
+| (題材)機材管理(第1弾: 機材) | 済 2026-11-04 | - | - | - | - | - | - |
 
 記入例: `済 2026-11-10`、`差戻し(理由)`。
 
+## 積み残し(機能)
+
+| 内容 | 状態 | リンク |
+|---|---|---|
+| 機材管理の未対応部分: UC-3、UC-6〜UC-28(順 2〜5)、誰がいつ触ったかのログ | todo | [concept の 4 章](../specs/concept/2026-11-equipment-management.md#4-ユースケース候補) |
+
 ## 引き継ぎメモ(新しいものを上に)
 
+- 2026-11-04: 機材管理の concept を作成し、承認(D29)。第1弾は UC-1、2、29、4、5。P7 を `spec-reviewer` とバックログに反映。決定は D13〜D29(docs/decisions.md)。
+  次は concept 9 章の依頼文で `/speckit-specify` を実行し、concept を `frozen` にする(未実行)。その後 `/speckit-clarify` で Q8 を決める。詰まりなし。
 - 2026-11-04: Spec Kit 導入(AG-04)と constitution v1.0.0(AG-05)を完了。どちらも trial。決定は D1〜D12(docs/decisions.md)。
   次は AG-01(題材「機材管理」の concept 作成。新セッションで「機材管理の concept を作りたい」)→ `/speckit-specify`。詰まりなし。
 - 2026-11-03: ワークフロー初期構成を作成(AGENTS.md / concept / spec-reviewer / manager / バックログ)。
