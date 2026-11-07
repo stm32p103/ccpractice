@@ -1,0 +1,11 @@
+{
+  "name": "ccpractice",
+  "owner": { "name": "stm32p103" },
+  "plugins": [
+    {
+      "name": "ai-process",
+      "source": "./ai-process",
+      "description": "エージェント・スキル体制（スキルを作るスキル、仕様駆動開発のスキル、評価の仕組み）"
+    }
+  ]
+}

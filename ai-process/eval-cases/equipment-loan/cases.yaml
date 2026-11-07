@@ -1,0 +1,198 @@
+# 評価ケース（題材: 備品の貸出・返却）。A=要件→OpenAPI契約、B=契約→テストコード。
+# どちらも「基本／あいまい／変更」の3種をそろえ、性質の差を比べる。
+#
+# 書き方（共通の型。eval/README.md も参照）
+#   inputs : 実行用ワークスペースの in/ にコピーするファイル（左=この題材のディレクトリからのパス、右=in/ での名前）
+#   stages : 生成役への指示を段階ごとに書く。gate: true の段階のあとは、人が review.md を見て承認するまで止まる（D08）
+#            review は、その段階のあとに人が見る review.md を作るコマンド
+#   checks : 最後に実行する判定コマンド。各コマンドは JSON を標準出力に出し、結果はまとめて score.json に入る
+#   review : 最後に人が見る review.md を作るコマンド（生のコードではなく、表と機械が挙げた点だけを見る）
+#   pass   : スクリプト判定の合格条件。`xxx_min` は「以上」
+# コマンド中の {ws} {suite} {kit} {review} {version} は実行時に置き換わる。.py で始まるものは Python で実行する。
+
+suite: equipment-loan
+
+common_output_rule: |
+  最後に out/result.json に次の形で書いてください。
+  {"status": "ok|ng|partial", "outputs": ["作ったファイルのパス"], "key_points": ["最大5件"],
+   "unresolved": ["判断できなかった点"], "process_version": "{version}", "model": "あなたのモデル名"}
+
+testcase_format: &tc_format |
+  テストケース一覧 out/test-cases.yaml は次の形で書いてください（人はこの一覧で観点の過不足を判断します）。
+  cases:
+    - id: TC-001            # TC-000 形式。重複させない
+      req: [REQ-001]        # 確かめる要件ID
+      given: 前提（今日の日付、備品の状態など）
+      when: 操作
+      then: { status: 201, check: 確かめる内容 }   # status は数値、または複数の操作なら数値の配列
+
+cases:
+  A1:
+    kind: A
+    title: 基本 - 要件v1から契約を起こす
+    skill: drafting-openapi-contract
+    rubric: rubrics/rubric_A.md
+    inputs: { fixtures/requirements_v1.md: requirements.md }
+    stages:
+      - id: contract
+        prompt: |
+          in/requirements.md を読み、OpenAPI 3.0 の API 契約を out/openapi.yaml に書いてください。
+          各 operation には、対応する要件IDを x-req-ids（配列）で付けてください。
+          要件から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+    checks:
+      - [checks/check_openapi.py, --contract, "{ws}/out/openapi.yaml", --requirements, "{ws}/in/requirements.md",
+         --expect-status, "REQ-002=409;REQ-003=400|422;REQ-005=409;REQ-006=404"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/contract_table.py, --contract, "{ws}/out/openapi.yaml", --md, "{review}"]
+    pass: { valid: true, req_coverage: 1.0, status_ng: [], req_unknown: [], result_ok: true }
+
+  A2:
+    kind: A
+    title: あいまい - 上限値や延滞の定義が書かれていない要件
+    skill: drafting-openapi-contract
+    rubric: rubrics/rubric_A.md
+    inputs: { fixtures/requirements_ambiguous.md: requirements.md }
+    stages:
+      - id: contract
+        prompt: |
+          in/requirements.md を読み、OpenAPI 3.0 の API 契約を out/openapi.yaml に書いてください。
+          各 operation には、対応する要件IDを x-req-ids（配列）で付けてください。
+          要件から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+    checks:
+      - [checks/check_openapi.py, --contract, "{ws}/out/openapi.yaml", --requirements, "{ws}/in/requirements.md"]
+      - ["{kit}/common_checks.py", questions, --file, "{ws}/out/open-questions.md", --reqs, "REQ-003,REQ-008"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/contract_table.py, --contract, "{ws}/out/openapi.yaml", --md, "{review}"]
+    pass: { valid: true, req_coverage: 1.0, questions_file: true, questions_missing: [], result_ok: true }
+
+  A3:
+    kind: A
+    title: 変更 - 既存契約v1に要件REQ-009（延長）を追加する
+    skill: drafting-openapi-contract
+    rubric: rubrics/rubric_A.md
+    inputs: { fixtures/requirements_v2.md: requirements.md, fixtures/openapi_v1.yaml: openapi_current.yaml }
+    stages:
+      - id: contract
+        prompt: |
+          in/openapi_current.yaml は現行の API 契約です。要件が in/requirements.md に更新されました。
+          更新後の契約を out/openapi.yaml に書いてください。既存の利用者を壊さないようにしてください。
+          各 operation には、対応する要件IDを x-req-ids（配列）で付けてください。
+          要件から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+    checks:
+      - [checks/check_openapi.py, --contract, "{ws}/out/openapi.yaml", --requirements, "{ws}/in/requirements.md",
+         --baseline, "{ws}/in/openapi_current.yaml", --expect-status, "REQ-009=403"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/contract_table.py, --contract, "{ws}/out/openapi.yaml", --baseline, "{ws}/in/openapi_current.yaml", --md, "{review}"]
+    pass: { valid: true, req_coverage: 1.0, status_ng: [], breaking_changes: [], result_ok: true }
+
+  B1:
+    kind: B
+    title: 基本 - 契約v1からテストケース一覧を起こし、承認後にテストコードを書く
+    skill: writing-contract-tests
+    rubric: rubrics/rubric_B.md
+    inputs: { fixtures/openapi_v1.yaml: openapi.yaml, fixtures/conftest.py: conftest.py }
+    stages:
+      - id: design
+        gate: true
+        prompt: |
+          in/openapi.yaml の API 契約に対するテストを設計し、テストケース一覧を out/test-cases.yaml に書いてください。
+          この段階ではテストコードは書かないでください。
+          契約から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+        format: *tc_format
+        review:
+          - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml",
+             --reqs, "REQ-001,REQ-002,REQ-003,REQ-004,REQ-005,REQ-006,REQ-007,REQ-008", --md, "{review}"]
+      - id: impl
+        prompt: |
+          out/test-cases.yaml は承認済みのテストケース一覧です。この一覧どおりに、pytest のテストを out/tests/test_*.py に書いてください。
+          一覧に無いケースは足さないでください（足したい場合は out/open-questions.md に書いてください）。
+          テストは in/conftest.py のフィクスチャ（client, clock, seed）だけを使ってください。実装はここにはありません。
+          各テストには @pytest.mark.req("REQ-xxx") と @pytest.mark.tc("TC-xxx") を付けてください。
+    checks:
+      - [checks/check_tests.py, --tests, "{ws}/out/tests",
+         --mutants, "m01_no_conflict_check,m02_due_upper_15,m03_due_same_day_ok,m04_return_not_loaned_ok,m05_status_unknown_200,m06_overdue_includes_due,m07_status_keeps_borrower",
+         --reqs, "REQ-001,REQ-002,REQ-003,REQ-004,REQ-005,REQ-006,REQ-007,REQ-008"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml", --reqs, "REQ-001,REQ-002,REQ-003,REQ-004,REQ-005,REQ-006,REQ-007,REQ-008", --md, "{review}"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests", --md, "{review}"]
+    pass: { reference_pass: true, kill_rate_min: 0.85, req_coverage: 1.0, cross_ok: true, result_ok: true }
+
+  B2:
+    kind: B
+    title: 変更 - 契約v2（延長を追加）に合わせて、一覧とテストを追加する
+    skill: writing-contract-tests
+    rubric: rubrics/rubric_B.md
+    inputs:
+      fixtures/openapi_v2.yaml: openapi.yaml
+      fixtures/conftest.py: conftest.py
+      fixtures/tests_v1_existing.py: tests/test_existing.py
+      fixtures/test-cases_v1_existing.yaml: test-cases.yaml
+    stages:
+      - id: design
+        gate: true
+        prompt: |
+          in/openapi.yaml の API 契約が更新され、返却予定日の延長（REQ-009）が増えました。
+          in/test-cases.yaml は既存のテストケース一覧です。既存のケースは変えずに、増えた分のケースを追加した一覧を
+          out/test-cases.yaml に書いてください。ID は既存の続きから振ってください。この段階ではテストコードは書かないでください。
+          契約から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+        format: *tc_format
+        review:
+          - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml",
+             --reqs, "REQ-001,REQ-002,REQ-003,REQ-004,REQ-005,REQ-006,REQ-007,REQ-008,REQ-009", --md, "{review}"]
+      - id: impl
+        prompt: |
+          out/test-cases.yaml は承認済みのテストケース一覧です。in/tests/test_existing.py は既存のテストで、
+          これは変更せず out/tests/ にそのままコピーしてください。一覧のうち既存テストに無いケースだけを、
+          out/tests/ に新しいファイルとして追加してください。
+          テストは in/conftest.py のフィクスチャ（client, clock, seed）だけを使ってください。実装はここにはありません。
+          各テストには @pytest.mark.req("REQ-xxx") と @pytest.mark.tc("TC-xxx") を付けてください。
+    checks:
+      - [checks/check_tests.py, --tests, "{ws}/out/tests", --mutants, "m08_extend_twice,m09_extend_by_other,m10_extend_upper_8", --reqs, "REQ-009"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests"]
+      - ["{kit}/common_checks.py", unchanged, --pair, "{ws}/in/tests/test_existing.py={ws}/out/tests/test_existing.py"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml", --reqs, "REQ-001,REQ-002,REQ-003,REQ-004,REQ-005,REQ-006,REQ-007,REQ-008,REQ-009", --md, "{review}"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests", --md, "{review}"]
+    pass: { reference_pass: true, kill_rate_min: 1.0, req_coverage: 1.0, cross_ok: true, unchanged_ok: true, result_ok: true }
+
+  B3:
+    kind: B
+    title: あいまい - 境界条件が書かれていない契約から、一覧とテストを起こす
+    skill: writing-contract-tests
+    rubric: rubrics/rubric_B.md
+    inputs: { fixtures/openapi_ambiguous.yaml: openapi.yaml, fixtures/conftest.py: conftest.py }
+    stages:
+      - id: design
+        gate: true
+        prompt: |
+          in/openapi.yaml の API 契約に対するテストを設計し、テストケース一覧を out/test-cases.yaml に書いてください。
+          この段階ではテストコードは書かないでください。
+          契約から判断できない点は、推測で決めずに out/open-questions.md に要件ID付きで書いてください。
+        format: *tc_format
+        review:
+          - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml",
+             --reqs, "REQ-001,REQ-002,REQ-004,REQ-005,REQ-006,REQ-007", --md, "{review}"]
+      - id: impl
+        prompt: |
+          out/test-cases.yaml は承認済みのテストケース一覧です。この一覧どおりに、pytest のテストを out/tests/test_*.py に書いてください。
+          一覧に無いケースは足さないでください（足したい場合は out/open-questions.md に書いてください）。
+          テストは in/conftest.py のフィクスチャ（client, clock, seed）だけを使ってください。実装はここにはありません。
+          各テストには @pytest.mark.req("REQ-xxx") と @pytest.mark.tc("TC-xxx") を付けてください。
+    checks:
+      # 境界のミュータント(m02,m03,m06)は契約に書かれていないので採点しない
+      - [checks/check_tests.py, --tests, "{ws}/out/tests",
+         --mutants, "m01_no_conflict_check,m04_return_not_loaned_ok,m05_status_unknown_200,m07_status_keeps_borrower",
+         --reqs, "REQ-001,REQ-002,REQ-004,REQ-005,REQ-006,REQ-007"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests"]
+      - ["{kit}/common_checks.py", questions, --file, "{ws}/out/open-questions.md", --reqs, "REQ-003,REQ-008"]
+      - ["{kit}/common_checks.py", result, --file, "{ws}/out/result.json", --version, "{version}"]
+    review:
+      - [checks/testcases.py, validate, --cases, "{ws}/out/test-cases.yaml", --reqs, "REQ-001,REQ-002,REQ-004,REQ-005,REQ-006,REQ-007", --md, "{review}"]
+      - [checks/testcases.py, crosscheck, --cases, "{ws}/out/test-cases.yaml", --tests, "{ws}/out/tests", --md, "{review}"]
+    pass: { reference_pass: true, kill_rate_min: 0.75, cross_ok: true, questions_file: true, questions_missing: [], result_ok: true }

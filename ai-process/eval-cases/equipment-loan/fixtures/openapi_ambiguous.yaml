@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: 備品貸出API
+  version: 1.0.0
+  description: 備品の貸出・返却（境界条件の記述なし）
+paths:
+  /equipment/{equipmentId}/loan:
+    post:
+      operationId: borrowEquipment
+      summary: 備品を借りる
+      x-req-ids:
+      - REQ-001
+      - REQ-002
+      - REQ-003
+      - REQ-006
+      parameters:
+      - $ref: '#/components/parameters/EquipmentId'
+      - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - dueDate
+              properties:
+                dueDate:
+                  type: string
+                  format: date
+                  description: 返却予定日
+      responses:
+        '201':
+          description: 貸出成立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+  /equipment/{equipmentId}/return:
+    post:
+      operationId: returnEquipment
+      summary: 備品を返却する（本人以外も可）
+      x-req-ids:
+      - REQ-004
+      - REQ-005
+      - REQ-006
+      parameters:
+      - $ref: '#/components/parameters/EquipmentId'
+      - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: 返却完了
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /equipment/{equipmentId}/status:
+    get:
+      operationId: getEquipmentStatus
+      summary: 貸出状態を参照する
+      x-req-ids:
+      - REQ-007
+      - REQ-006
+      parameters:
+      - $ref: '#/components/parameters/EquipmentId'
+      responses:
+        '200':
+          description: 現在の貸出状態
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /loans/overdue:
+    get:
+      operationId: listOverdueLoans
+      summary: 延滞中の貸出一覧
+      x-req-ids:
+      - REQ-008
+      responses:
+        '200':
+          description: 延滞中の貸出
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+components:
+  parameters:
+    EquipmentId:
+      name: equipmentId
+      in: path
+      required: true
+      schema:
+        type: string
+    UserId:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+  responses:
+    NotFound:
+      description: 備品が存在しない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: 状態が操作と合わない（貸出中の備品を借りる、貸出中でない備品を返却する）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Invalid:
+      description: 入力が不正
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Loan:
+      type: object
+      required:
+      - equipmentId
+      - borrowerId
+      - loanDate
+      - dueDate
+      properties:
+        equipmentId:
+          type: string
+        borrowerId:
+          type: string
+        loanDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+    Status:
+      type: object
+      required:
+      - equipmentId
+      - state
+      properties:
+        equipmentId:
+          type: string
+        state:
+          type: string
+          enum:
+          - available
+          - on_loan
+        borrowerId:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+    Error:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
