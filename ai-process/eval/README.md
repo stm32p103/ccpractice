@@ -13,7 +13,8 @@
 ## 1回分の流れ
 ```bash
 cd ai-process
-python3 eval/kit.py prepare B1 --suite equipment-loan --variant noskill --trials 3
+python3 eval/kit.py prepare B1 --suite equipment-loan --variant noskill --trials 3            # Claude Code
+python3 eval/kit.py prepare B1 --suite equipment-loan --variant noskill --env copilot --trials 1  # Copilot（手作業）
 python3 eval/kit.py next <id>        # 表示されたコマンドで生成役を動かす（新しいセッション）
 python3 eval/kit.py review <id>      # ゲートの段階のあと: runs/<id>/review_<段階>.md を人が見る
 python3 eval/kit.py approve <id>     # 承認 → next で次の段階
@@ -23,7 +24,7 @@ python3 eval/kit.py score <id>       # 判定（score.json）と、人が見る 
 python3 eval/kit.py summarize        # eval/results/summary.md
 ```
 - 評価中は、このプラグイン自体を無効にして動かします（有効のままだと、「スキル無し」の実行にも評価対象のスキルが混ざるため）。`next` が表示するコマンドには、そのための設定が入っています。設定の書き方は最新のドキュメントで確認してください。
-- Copilot で試す場合は、`runs/<id>/workspace` をフォルダとして開き、エージェントモードにプロンプトの内容を貼ります。
+- Copilot で試す場合は `--env copilot` で準備します。`next` が手順を表示します（workspace だけをフォルダとして開き、新しいチャットでプロンプトを貼る）。集計は環境ごとに分かれます。
 
 ## 新しい題材を足すとき
 `eval-cases/<題材>/` を作り、次のものを用意します。共通部（このディレクトリ）は変えません。

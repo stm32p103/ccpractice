@@ -1,6 +1,6 @@
 {
   "name": "ai-process",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "エージェント・スキル体制（スキルを作るスキル、仕様駆動開発のスキル、評価の仕組み）。版は成果物の約束事で上げる（docs/versioning.md）",
   "author": { "name": "stm32p103" }
 }

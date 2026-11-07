@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """評価の仕組み（共通部）。題材に依存しない。LLMは呼ばない（LLMの実行は人が行う）。
 
-  kit.py prepare <case> --suite <題材> --variant noskill|skill [--trials 3]  実行用の場所を作る
+  kit.py prepare <case> --suite <題材> --variant noskill|skill [--env claude|copilot] [--trials 3]  実行用の場所を作る
   kit.py next    <run_id>      今の段階で実行するコマンドを表示する
   kit.py review  <run_id>      ゲートのある段階のあとに、人が見る review_<段階>.md を作る
   kit.py approve <run_id>      ゲートを承認して次の段階へ進める（差し戻すなら、同じ段階をもう一度実行して review する）
@@ -32,7 +32,8 @@ RUNS = KIT / "runs"
 HIDDEN = RUNS / "_hidden"
 INDEX = RUNS / "index.csv"
 RESULTS = KIT / "results"
-FIELDS = ["run_id", "suite", "case", "variant", "trial", "process_version", "created"]
+FIELDS = ["run_id", "suite", "case", "variant", "env", "trial", "process_version", "created"]
+ENVS = ["claude", "copilot"]   # 生成役を動かす環境（D19）
 PLUGIN = "ai-process@ccpractice"
 # 評価中はプラグインを無効にする（有効だと「スキル無し」にも評価対象のスキルが混ざる）。オプション名は最新のドキュメントで確認すること
 NO_PLUGIN = f"--settings '{{\"enabledPlugins\": {{\"{PLUGIN}\": false}}}}'"
@@ -50,7 +51,25 @@ def index() -> dict[str, dict]:
     if not INDEX.exists():
         return {}
     with INDEX.open(encoding="utf-8") as f:
-        return {r["run_id"]: r for r in csv.DictReader(f)}
+        rows = list(csv.DictReader(f))
+    for r in rows:
+        r["env"] = r.get("env") or "claude"   # env 列が無かった頃（0.2.0）の行は Claude Code とみなす
+    return {r["run_id"]: r for r in rows}
+
+
+def migrate_index() -> None:
+    """0.2.0 の index.csv（env 列なし）を、今の列に書き直す。"""
+    if not INDEX.exists():
+        return
+    with INDEX.open(encoding="utf-8") as f:
+        header = next(csv.reader(f), [])
+    if header == FIELDS:
+        return
+    rows = list(index().values())
+    with INDEX.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows({k: r.get(k, "") for k in FIELDS} for r in rows)
 
 
 def state(run: Path) -> dict:
@@ -92,6 +111,7 @@ def prepare(a) -> None:
     sdir = SUITES / a.suite
     ver = process_version()
     RUNS.mkdir(parents=True, exist_ok=True)
+    migrate_index()
     new = not INDEX.exists()
     with INDEX.open("a", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
@@ -119,13 +139,13 @@ def prepare(a) -> None:
             (run / "JUDGE.md").write_text(judge_prompt(a.case, case, sdir), encoding="utf-8")
             (run / "human.json").write_text(human_template(a.case, sdir / case["rubric"]), encoding="utf-8")
             save_state(run, {"stage": 0, "approved": []})
-            w.writerow({"run_id": rid, "suite": a.suite, "case": a.case, "variant": a.variant, "trial": t,
+            w.writerow({"run_id": rid, "suite": a.suite, "case": a.case, "variant": a.variant, "env": a.env, "trial": t,
                         "process_version": ver, "created": datetime.now().isoformat(timespec="seconds")})
-            print(f"[{rid}] {a.suite}/{a.case} trial {t}  → python3 eval/kit.py next {rid}")
+            print(f"[{rid}] {a.suite}/{a.case} {a.env} trial {t}  → python3 eval/kit.py next {rid}")
 
 
 def next_(a) -> None:
-    _, _, case, run = ctx(a.run_id)
+    row, _, case, run = ctx(a.run_id)
     st = state(run)
     stages = case["stages"]
     if st["stage"] >= len(stages):
@@ -134,10 +154,17 @@ def next_(a) -> None:
     i = st["stage"]
     stg = stages[i]
     prompt = run / f"PROMPT_{i + 1}_{stg['id']}.md"
-    print(f"段階 {i + 1}/{len(stages)}: {stg['id']}（新しいセッションで実行する）")
-    print(f"  cd {run / 'workspace'} && claude -p \"$(cat {prompt})\" --output-format json "
-          f"--allowedTools Read,Write,Edit,Glob,Grep {NO_PLUGIN} > {run / f'agent_output_{i + 1}.json'}")
-    print("  Copilot の場合: workspace をフォルダとして開き、エージェントモードにプロンプトの内容を貼る")
+    print(f"段階 {i + 1}/{len(stages)}: {stg['id']}（環境: {row['env']}、新しいセッションで実行する）")
+    if row["env"] == "copilot":
+        print(f"  1. VS Code で {run / 'workspace'} をフォルダとして開く（ほかのフォルダは開かない）")
+        print(f"  2. Copilot Chat を新しく開き、エージェントモードで {prompt} の内容を貼って実行する")
+        print(f"  3. 任意: Agent Debug Log からターン数・トークン数を {run / f'agent_output_{i + 1}.json'} に"
+              ' {"num_turns": .., "usage": {"output_tokens": ..}} の形で書くと集計に入る')
+        print("  スキル無しの場合は、ユーザー設定やほかのワークスペースのスキル・指示ファイルが読まれていないかを、"
+              "回答の References 欄で確かめる")
+    else:
+        print(f"  cd {run / 'workspace'} && claude -p \"$(cat {prompt})\" --output-format json "
+              f"--allowedTools Read,Write,Edit,Glob,Grep {NO_PLUGIN} > {run / f'agent_output_{i + 1}.json'}")
     after = "python3 eval/kit.py review " if stg.get("gate") else "python3 eval/kit.py score "
     print("  終わったら:", after + a.run_id)
 
@@ -315,19 +342,19 @@ def summarize(_a) -> None:
             if isinstance(js.get(k), int) and isinstance(hs.get(k), int):
                 diffs.setdefault(k, []).append(abs(js[k] - hs[k]))
         usage = [u for u in s.get("usage") or [] if u]
-        groups.setdefault((r["suite"], r["case"], r["variant"], r["process_version"]), []).append({
+        groups.setdefault((r["suite"], r["case"], r["variant"], r["env"], r["process_version"]), []).append({
             "passed": s.get("passed"), "kill_rate": s.get("kill_rate"),
             "judge": mean(list(js.values())), "human": mean(list(hs.values())),
             "out_tokens": sum(u.get("output_tokens") or 0 for u in usage) or None,
             "turns": sum(u.get("num_turns") or 0 for u in usage) or None})
     lines = ["# 集計", "",
-             "| 題材 | ケース | スキル | 体制の版 | 回数 | スクリプト合格 | 検出率 | LLM採点 | 人の採点 | 出力トークン | ターン |",
-             "|---|---|---|---|---|---|---|---|---|---|---|"]
-    for (suite, case, variant, ver), items in sorted(groups.items()):
+             "| 題材 | ケース | スキル | 環境 | 体制の版 | 回数 | スクリプト合格 | 検出率 | LLM採点 | 人の採点 | 出力トークン | ターン |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for (suite, case, variant, env, ver), items in sorted(groups.items()):
         scored = [i for i in items if i["passed"] is not None]
         rate = f"{sum(i['passed'] for i in scored)}/{len(scored)}" if scored else "-"
         cols = [mean([i[k] for i in items]) for k in ("kill_rate", "judge", "human", "out_tokens", "turns")]
-        lines.append(f"| {suite} | {case} | {variant} | {ver} | {len(items)} | {rate} | " + " | ".join(map(fmt, cols)) + " |")
+        lines.append(f"| {suite} | {case} | {variant} | {env} | {ver} | {len(items)} | {rate} | " + " | ".join(map(fmt, cols)) + " |")
     lines += ["", "## LLM採点と人の採点のずれ（観点別、差の絶対値の平均。1未満が目安）", "",
               "| 観点 | 件数 | 平均の差 | 差が2以上 |", "|---|---|---|---|"]
     lines += [f"| {k} | {len(d)} | {mean(d)} | {sum(x >= 2 for x in d)} |" for k, d in sorted(diffs.items())] or \
@@ -342,6 +369,7 @@ def main() -> None:
     sub = ap.add_subparsers(required=True)
     p = sub.add_parser("prepare"); p.add_argument("case"); p.add_argument("--suite", required=True)
     p.add_argument("--variant", choices=["noskill", "skill"], required=True); p.add_argument("--trials", type=int, default=3)
+    p.add_argument("--env", choices=ENVS, default="claude", help="生成役を動かす環境（D19）")
     p.set_defaults(fn=prepare)
     for name, fn in (("next", next_), ("review", review)):
         s = sub.add_parser(name); s.add_argument("run_id"); s.set_defaults(fn=fn)
