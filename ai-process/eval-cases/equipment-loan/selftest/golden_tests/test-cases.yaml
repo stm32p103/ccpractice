@@ -1,0 +1,80 @@
+cases:
+- id: TC-001
+  req:
+  - REQ-001
+  given: 今日=11/1、EQ-1は貸出可
+  when: u1が返却予定日11/5で借りる
+  then:
+    status: 201
+    check: 借りた人がu1になる
+- id: TC-002
+  req:
+  - REQ-002
+  given: EQ-1をu1が貸出中
+  when: u2が借りる
+  then:
+    status: 409
+    check: 借りられない
+- id: TC-003
+  req:
+  - REQ-003
+  given: 今日=11/1
+  when: 返却予定日を11/1・11/2・11/15・11/16で借りる
+  then:
+    status:
+    - 201
+    - 422
+    check: 翌日〜14日後だけ借りられ、それ以外は422
+- id: TC-004
+  req:
+  - REQ-004
+  - REQ-007
+  given: EQ-1をu1が貸出中
+  when: u2が返却し、状態を参照する
+  then:
+    status: 200
+    check: 貸出可・借りた人と予定日が空になる
+- id: TC-005
+  req:
+  - REQ-005
+  given: EQ-1は貸出可
+  when: 返却する
+  then:
+    status: 409
+    check: 返却できない
+- id: TC-006
+  req:
+  - REQ-006
+  given: NOPEは未登録
+  when: 状態参照・返却・貸出をする
+  then:
+    status: 404
+    check: すべて404
+- id: TC-007
+  req:
+  - REQ-007
+  given: EQ-1をu1が11/5まで貸出中
+  when: 状態を参照する
+  then:
+    status: 200
+    check: 貸出中・u1・11/5が返る
+- id: TC-008
+  req:
+  - REQ-008
+  given: EQ-1をu1が11/5まで貸出中
+  when: 今日=11/5と11/6で延滞一覧を見る
+  then:
+    status: 200
+    check: 11/5は空、11/6はEQ-1が出る
+- id: TC-009
+  req:
+  - REQ-009
+  given: EQ-1をu1が11/5まで貸出中
+  when: u2が延長、u1が8日後・7日後に延長、もう一度延長
+  then:
+    status:
+    - 403
+    - 422
+    - 200
+    - 409
+    check: 本人のみ、7日以内、1回だけ
