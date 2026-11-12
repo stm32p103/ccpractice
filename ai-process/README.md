@@ -13,7 +13,9 @@
 | `eval-cases/<題材>/` | 題材固有部（入力、正解の判定方法、判定スクリプト、採点基準） |
 | `scripts/export_copilot.py` | VS Code / GitHub Copilot 向けに `.github/` へ書き出す |
 | `scripts/pack_skill.py` | Claude アプリにアップロードするスキルの zip を作る |
-| `docs/` | 版の付け方、決定記録 |
+| `scripts/build_public_index.py` | ドメインの knowledge/ から公開用の索引（public/index.md）を作る |
+| `templates/domain/` | ドメインのプラグインのひな形（knowledge/ と public/） |
+| `docs/` | 版の付け方、決定記録、知識の書式（[knowledge-format.md](docs/knowledge-format.md)） |
 
 ## 正本と配り方
 正本はこのリポジトリです。各環境へは一方向に配り、配った先では直接編集しません。
@@ -26,9 +28,13 @@
 
 コマンド名や設定項目は版によって変わることがあるので、最新のドキュメントで確認してください。
 
+## 書き方の決まり
+例や説明文では、扱っている製品や具体的な技術が分かる書き方をしません。製品は A・B・C、通信・装置・形式は X・Y・Z のような記号で書きます（例：「通信X」「装置Y」「製品A」）。
+
 ## 評価
 ```bash
 pip install fastapi httpx pytest pyyaml openapi-spec-validator
 python3 ai-process/eval-cases/equipment-loan/selftest/run_selftest.py   # 判定の仕組み自体のテスト
+python3 ai-process/scripts/selftest_build_public_index.py               # 索引の生成スクリプトのテスト
 ```
 実行の手順は [eval/README.md](eval/README.md)、題材の説明は [eval-cases/equipment-loan/README.md](eval-cases/equipment-loan/README.md) にあります。
