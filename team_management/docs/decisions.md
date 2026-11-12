@@ -33,3 +33,4 @@
 | TM-D26 | コミットと specify の順番 | ブランチ `team-desk-concept` で concept までをコミットし PR。specify は機能ブランチ `001-request-intake` で行う | 2026-11-13 |
 | TM-D27 | constitution | 決まった方針から原則 I〜VI を作る(v1.0.0)。`spec/` のものは使わない | 2026-11-13 |
 | TM-D28 | spec のコミット | clarify の後にまとめてコミットする | 2026-11-13 |
+| TM-D29 | spec(001-request-intake)の承認 | 承認(G1)。次は `/speckit-plan` | 2026-11-13 |
