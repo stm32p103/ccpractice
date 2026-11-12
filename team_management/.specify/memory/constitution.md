@@ -1,50 +1,77 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# team-desk Constitution
+
+チーム業務補佐プラグイン。原則だけを書く。詳細は `specs/concept/` と `docs/decisions.md` に任せる。
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. AI は意味の判断だけ
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- AI が担うのは要約、判断、文案だけ
+- 毎回同じ結果になるべき処理はスクリプトで行う(MUST)
+  - 例: 抽出、突き合わせ、整形、一覧、集計、ファイルの移動
+- 理由: トークンを節約し、結果を再現できるようにする
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. アクセスは対象リポジトリだけ
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+- 外部へのアクセスは、設定した対象リポジトリに限る(MUST)
+  - 許可: Issue の読み書き、push
+  - 禁止: Web 検索、Web 取得、他のリポジトリ・サービスへの書き込み
+- 利用者の指示があっても守る(MUST)
+- AI への指示文だけでなく、仕組み(フック、スクリプトの設定)で止める(MUST)
+- 理由: 漏えいは「外へ出さない」ことで防ぐ(TM-D04、TM-D10)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. 人がゲートで承認する
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- 次の前に人が確認・承認する(MUST): ラベルの付与、Issue への投稿、コミット
+- 人に見せるのは、構造化された項目と、機械が挙げた例外だけにする(SHOULD)
+- AI の成果物を、AI の要約だけで確認しない(MUST)
+- 理由: 続けられる量の確認でなければ、形だけになる
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. 文書を軽く保つ
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- 1 件 1 ファイルにする(MUST)
+- 完了したものは archive へ移す。指示が無い限り AI は読まない(MUST)
+- リストは生成物として毎回作り直す。追記しない。AI は読まない(MUST)
+- 更新時は、前回からの差分だけを AI に渡す(MUST)
+- 理由: 文書は時間とともに肥大化する。読む量を将来にわたって一定に保つ
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Claude Code と GitHub Copilot の両方で動く
+
+- SKILL.md、スクリプト、入出力の約束で書く(MUST)
+- 環境固有の機能(フックなど)に頼る部分は、代わりの手段を用意する(MUST)
+- 理由: 職場(Copilot)と個人(Claude Code)で同じ設計を使う
+
+### VI. 評価して育てる
+
+- 変更は評価ケース(基本 / あいまい / 変更)で確かめる(MUST)
+- 成果物に、作成時の版とモデル名を残す(MUST)
+- つまずいた点を埋める形で、スキルを育てる(SHOULD)
+- 理由: 「良くなった気がする」で改善しない
+
+## 開発と配布
+
+- 開発: `team_management/`(specs、docs、評価ケース、.specify)
+- 配布: リポジトリ直下の `team-desk/`(TM-D15)
+- チームのデータ(依頼ファイルなど)を、プラグインのリポジトリに置かない(MUST)
+- 評価ケースは `team_management/eval-cases/`。`ai-process/eval/` の共通部を使う
+
+## 品質ゲート
+
+- 段階: 要件(spec)→ 設計(plan)→ タスク(tasks)→ 実装 → 検証
+- 各段階の成果物は、開発者の明示的な承認まで次に進まない
+- plan では、この文書の原則 I〜VI への適合を確かめる
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- この文書は、他の手順や慣習より優先する
+- 改定: 開発者の承認で行い、`docs/decisions.md` に記録する
+- 本文書の版:
+  - メジャー: 原則の削除、意味の変更
+  - マイナー: 原則・節の追加、大きな拡充
+  - パッチ: 書き方の修正
+- プラグインの版: 成果物の約束で上げる
+  - メジャー: 必須の成果物や形式の変更(移行手順を同梱する)
+  - マイナー: 任意の追加
+  - パッチ: 書き方の修正
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-13

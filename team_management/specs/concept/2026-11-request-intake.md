@@ -1,7 +1,7 @@
 ---
 status: frozen         # draft / frozen
 created: 2026-11-13
-specified_as:          # /speckit.specify 後に機能フォルダ名
+specified_as: 001-request-intake
 ---
 
 # 依頼の受付(チーム業務補佐プラグイン 第1弾)

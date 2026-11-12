@@ -30,3 +30,6 @@
 | TM-D23 | 依頼どうしの関係の影響 | 第 1 弾は関係を書くだけ。影響を知らせるのは計画管理(BL-5) | 2026-11-13 |
 | TM-D24 | 関係の種類 | depends_on / same_target / duplicates / related で始め、使いながら足す(一覧は設定ファイル) | 2026-11-13 |
 | TM-D25 | 関係者の書き方 | GitHub の ID。ID が分からない人だけ自由な文字列(スクリプトが一覧に出す) | 2026-11-13 |
+| TM-D26 | コミットと specify の順番 | ブランチ `team-desk-concept` で concept までをコミットし PR。specify は機能ブランチ `001-request-intake` で行う | 2026-11-13 |
+| TM-D27 | constitution | 決まった方針から原則 I〜VI を作る(v1.0.0)。`spec/` のものは使わない | 2026-11-13 |
+| TM-D28 | spec のコミット | clarify の後にまとめてコミットする | 2026-11-13 |
