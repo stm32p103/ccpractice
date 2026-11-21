@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+
+# ツールの一時ファイル
+ops/dev/.cache/
+*.log
+*.tmp
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+*.swp
+.idea/

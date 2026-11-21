@@ -228,3 +228,6 @@ Report final status with summary of completed work.
 - [ ] Implementation validated against specification, plan, and test coverage
 - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above
 - [ ] Completion reported to user with summary of completed work
+
+## Language Requirement
+**ALL outputs MUST be in Japanese.(UTF8)**

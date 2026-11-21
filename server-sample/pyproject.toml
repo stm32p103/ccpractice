@@ -1,0 +1,49 @@
+[project]
+name = "job-platform-workspace"
+version = "0.1.0"
+description = "汎用ジョブ実行基盤のワークスペース(配布しない)"
+requires-python = ">=3.12"
+dependencies = ["job-core", "job-testing"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "hypothesis>=6.100",
+    "pytest-cov>=5.0",
+    "jsonschema>=4.23",
+    "import-linter>=2.1",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["core", "testing"]
+
+[tool.uv.sources]
+job-core = { workspace = true }
+job-testing = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["core/src", "testing/src"]
+# Spec Kit などの道具のファイルは対象外(この feature の成果物ではない)
+extend-exclude = [".specify", ".claude", "draft", "inputs", "specs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = ["core/src", "testing/src"]
+packages = ["job_core", "job_testing"]
+
+[tool.pytest.ini_options]
+testpaths = ["core/tests", "testing/tests"]
+addopts = "-m 'not perf' --import-mode=importlib"
+markers = ["perf: 性能の目安のテスト(既定では実行しない。-m perf で実行)"]

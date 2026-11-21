@@ -1,0 +1,16 @@
+[project]
+name = "job-testing"
+version = "0.1.0"
+description = "core のポートの Fake と契約テスト(テスト専用)"
+requires-python = ">=3.12"
+dependencies = ["job-core", "pytest>=8.3"]
+
+[tool.uv.sources]
+job-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "job_testing"

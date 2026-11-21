@@ -1,0 +1,36 @@
+[importlinter]
+root_packages =
+    job_core
+include_external_packages = True
+
+[importlinter:contract:core-first-party]
+name = job_core は他の first-party パッケージ(job_testing など)を import しない
+type = forbidden
+source_modules =
+    job_core
+forbidden_modules =
+    job_testing
+
+[importlinter:contract:job-layers]
+name = job コンテキストの層: application → domain の向きのみ
+type = layers
+layers =
+    job_core.job.application
+    job_core.job.domain
+
+[importlinter:contract:access-independent]
+name = access コンテキストは job コンテキストを import しない
+type = forbidden
+source_modules =
+    job_core.access
+forbidden_modules =
+    job_core.job
+
+[importlinter:contract:shared-independent]
+name = shared はどのコンテキストも import しない
+type = forbidden
+source_modules =
+    job_core.shared
+forbidden_modules =
+    job_core.job
+    job_core.access

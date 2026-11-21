@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-core:events:job.completed:1",
+  "title": "JobCompleted",
+  "description": "ジョブの終了(成功/失敗/中断)の確定を知らせるドメインイベント。参照用の識別子と状態だけを持つ。payload・ログ本文・結果の要約・ランナーの情報は持たない(FR-030、書き出し台帳 E9/E10 の元データ)。受け手は同じ event_id を複数回受け取りうる(FR-027)。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "job_id",
+    "state",
+    "finished_at",
+    "retry_of",
+    "submitter_id"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベントの一意の識別子。重複の除去に使う。"
+    },
+    "event_type": {
+      "const": "job.completed"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "イベントの発生日時(UTC)。"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": ["succeeded", "failed", "cancelled"]
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retry_of": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "やり直しの元のジョブの識別子。やり直しでなければ null。"
+    },
+    "submitter_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "名義上の提出者の識別子。"
+    }
+  }
+}
