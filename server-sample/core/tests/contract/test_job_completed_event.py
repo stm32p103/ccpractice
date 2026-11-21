@@ -67,15 +67,7 @@ def strings_in(value: object) -> list[str]:
     return []
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
-@given(
-    payload=json_values,
-    summary=st.text(min_size=8, max_size=200),
-    outcome=st.sampled_from([JobState.SUCCEEDED, JobState.FAILED]),
-)
-def test_events_conform_to_schema_and_never_contain_payload_or_summary(
-    payload: object, summary: str, outcome: JobState
-) -> None:
+def _complete_and_serialize(payload: object, summary: str, outcome: JobState) -> tuple[dict[str, object], str]:
     core = build_core()
     core.runners.register("R1", {"os": "x"})
     alice = principal("alice", SUBMITTER_PERMS)
@@ -90,8 +82,22 @@ def test_events_conform_to_schema_and_never_contain_payload_or_summary(
         entries = uow.outbox.fetch_pending(10)
     assert len(entries) == 1
     document = entries[0].event.to_dict()
+    return document, json.dumps(document, ensure_ascii=False)
+
+
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(
+    payload=json_values,
+    summary=st.text(min_size=8, max_size=200),
+    outcome=st.sampled_from([JobState.SUCCEEDED, JobState.FAILED]),
+)
+def test_events_conform_to_schema_and_never_contain_payload_or_summary(
+    payload: object, summary: str, outcome: JobState
+) -> None:
+    document, serialized = _complete_and_serialize(payload, summary, outcome)
     jsonschema.validate(document, packaged_schema(), format_checker=jsonschema.FormatChecker())
-    serialized = json.dumps(document, ensure_ascii=False)
-    secrets = [s for s in [*strings_in(payload), summary] if len(s) >= 8]
+    # イベント自身の固定の項目(項目名・状態の値など)と偶然一致した文字列は、漏れとして数えない
+    _, baseline = _complete_and_serialize({"k": 0}, "-", outcome)
+    secrets = [s for s in [*strings_in(payload), summary] if len(s) >= 8 and s not in baseline]
     for secret in secrets:
         assert secret not in serialized

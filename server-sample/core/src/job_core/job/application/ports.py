@@ -51,6 +51,7 @@ class AuditFilter:
     actor: SubjectId | None = None
     operation: AuditOperation | None = None
     outcome: AuditOutcome | None = None
+    runner_id: RunnerId | None = None
 
     def matches(self, record: AuditRecord) -> bool:
         return (
@@ -60,6 +61,7 @@ class AuditFilter:
             and (self.actor is None or record.actor == self.actor)
             and (self.operation is None or record.operation is self.operation)
             and (self.outcome is None or record.outcome is self.outcome)
+            and (self.runner_id is None or record.runner_id == self.runner_id)
         )
 
 

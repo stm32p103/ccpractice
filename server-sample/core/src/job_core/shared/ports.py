@@ -16,3 +16,11 @@ class IdGenerator(Protocol):
     """一意な識別子(空でない文字列)を発行する。"""
 
     def new_id(self) -> str: ...
+
+
+class SecretGenerator(Protocol):
+    """ランナーのトークンを作る(contracts/ports.md「SecretGenerator」)。"""
+
+    def new_token(self) -> str:
+        """`rt_` + 32 バイトの乱数の URL 安全な文字列を返す。"""
+        ...

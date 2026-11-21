@@ -11,7 +11,7 @@
     取得先は書き出し台帳 E15(公式の配布元・公式のパッケージ索引。取得のみ)に限る。秘密情報は扱わない。
 
 .PARAMETER VerifyOnly
-    構築はせず、quickstart.md の検証 V1〜V11 を順に実行して結果の一覧を表示する。
+    構築はせず、quickstart.md の検証 V1〜V18 を順に実行して結果の一覧を表示する。
 
 .PARAMETER Uninstall
     .venv と ops/dev/.cache を削除する。
@@ -310,6 +310,19 @@ function Invoke-DevVerification {
                 if ($LASTEXITCODE -eq 0) { & $powershell -NoProfile -NonInteractive -Command $analyzerCommand }
             }
         }
+        @{ Id = 'V12'; Name = '照合の単体テスト'; Command = { & $UvPath run pytest core/tests/unit/runner/test_matching.py } }
+        @{ Id = 'V13'; Name = 'ランナーの状態の導出・リースの遷移'; Command = { & $UvPath run pytest core/tests/unit/runner } }
+        @{ Id = 'V14'; Name = 'ランナー管理の受け入れシナリオ'; Command = { & $UvPath run pytest core/tests/acceptance/runner } }
+        @{ Id = 'V15'; Name = '判定と割り当ての一致'; Command = {
+                & $UvPath run pytest core/tests/acceptance/runner -k eligibility_consistency
+            }
+        }
+        @{ Id = 'V16'; Name = '権限の網羅(12 権限)'; Command = { & $UvPath run pytest core/tests/unit/test_authorization.py core/tests/unit/runner/test_authorization.py } }
+        @{ Id = 'V17'; Name = 'トークンの非露出・ランナー管理の同時実行'; Command = {
+                & $UvPath run pytest core/tests/acceptance/runner -k 'token or concurrency'
+            }
+        }
+        @{ Id = 'V18'; Name = '割り当ての性能の目安'; Command = { & $UvPath run pytest core/tests/perf -m perf -k request_job } }
     )
 
     $results = @()

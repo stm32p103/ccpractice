@@ -1,6 +1,6 @@
 """権限の判定の網羅テスト(SC-006)。
 
-9 権限の全部分集合(512 通り)× 所有(自分/他人)× 対象の状態 × 操作について、
+12 権限の全部分集合(4096 通り)× 所有(自分/他人)× 対象の状態 × 操作について、
 contracts/application-api.md「可否の表」から独立に書いた期待値と一致することを検査する。
 Principal.kind を変えても結果が変わらないこと(憲章 原則 9)も検査する。
 """
@@ -97,8 +97,8 @@ def allowed(operation: str, principal: Principal, own: bool, state: JobState) ->
 
 
 def test_subset_count() -> None:
-    assert len(P) == 9
-    assert len(ALL_SUBSETS) == 512
+    assert len(P) == 12
+    assert len(ALL_SUBSETS) == 4096
 
 
 @pytest.mark.parametrize("operation", OPERATIONS)

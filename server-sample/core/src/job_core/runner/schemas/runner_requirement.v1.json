@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-core:runner-requirement:1",
+  "title": "ランナー要件(版 1)",
+  "description": "ジョブが求めるランナーの能力の条件。all のすべての条件を満たすとき「要件を満たす」。空の all はすべてのランナーが満たす。spec FR-007、research R2。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["all"],
+  "properties": {
+    "all": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/condition" }
+    }
+  },
+  "$defs": {
+    "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000-\\u001f\\u007f]+$" },
+    "number": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "version": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+){0,7}$" },
+    "texts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "op", "value"],
+          "properties": {
+            "key": { "$ref": "#/$defs/key" },
+            "op": { "const": "eq" },
+            "value": { "$ref": "#/$defs/text" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "op", "values"],
+          "properties": {
+            "key": { "$ref": "#/$defs/key" },
+            "op": { "enum": ["in", "contains"] },
+            "values": { "$ref": "#/$defs/texts" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "op", "value"],
+          "properties": {
+            "key": { "$ref": "#/$defs/key" },
+            "op": { "enum": ["num_gt", "num_ge", "num_lt", "num_le"] },
+            "value": { "$ref": "#/$defs/number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "op", "value"],
+          "properties": {
+            "key": { "$ref": "#/$defs/key" },
+            "op": { "enum": ["ver_gt", "ver_ge", "ver_lt", "ver_le"] },
+            "value": { "$ref": "#/$defs/version" }
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    { "all": [] },
+    {
+      "all": [
+        { "key": "k1", "op": "eq", "value": "a" },
+        { "key": "k2", "op": "ver_ge", "value": "1.2" },
+        { "key": "set1", "op": "contains", "values": ["x", "y"] }
+      ]
+    }
+  ]
+}

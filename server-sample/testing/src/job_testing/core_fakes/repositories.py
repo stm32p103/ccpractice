@@ -1,4 +1,5 @@
 """メモリ上の Unit of Work とリポジトリ(contracts/ports.md の約束 1〜5 の Fake)。
+002 の runner のリポジトリ(runners、leases、tokens、allowlist)も、同じ UoW で確定する(runner_repositories.py)。
 
 - 確定した状態は InMemoryStore が持つ。UoW は読み込んだ集約の複製を扱い、commit で version を比較して確定する。
 - 集約に積まれたイベントは、commit の中でアウトボックスへ PENDING として書く。
@@ -25,6 +26,8 @@ from job_core.job.domain.states import JobState
 from job_core.job.domain.values import DuplicateKey
 from job_core.shared.ids import JobId, RunnerId
 
+from .runner_repositories import RunnerRepositories, RunnerStoreState
+
 
 class InMemoryStore:
     """確定した状態。複数の UoW から共有される。"""
@@ -35,6 +38,7 @@ class InMemoryStore:
         self.queue = Queue()
         self.audit: list[AuditRecord] = []
         self.outbox: dict[str, OutboxEntry] = {}
+        self.runner_state = RunnerStoreState()
         self._before_commit: list[Callable[[], None]] = []
         self.commit_count = 0
 
@@ -226,6 +230,11 @@ class InMemoryUnitOfWork:
         self.queue = InMemoryQueueRepository(store)
         self.audit = InMemoryAuditLog(store)
         self.outbox = InMemoryOutbox(store)
+        self._runner = RunnerRepositories(store.runner_state)
+        self.runners = self._runner.runners
+        self.leases = self._runner.leases
+        self.tokens = self._runner.tokens
+        self.allowlist = self._runner.allowlist
         self._committed = False
 
     def __enter__(self) -> Self:
@@ -263,6 +272,7 @@ class InMemoryUnitOfWork:
                 raise ConcurrencyConflict(f"ジョブ {job_id} が同時に追加された")
         if self.queue.loaded_version is not None and store.queue.version != self.queue.loaded_version:
             raise ConcurrencyConflict("待機列が同時に更新された")
+        self._runner.check()
 
     def _apply(self) -> None:
         store = self._store
@@ -280,6 +290,7 @@ class InMemoryUnitOfWork:
         if self.queue.pending is not None and self.queue.pending.entries != store.queue.entries:
             self.queue.pending.version += 1
             store.queue = copy.deepcopy(self.queue.pending)
+        self._runner.apply()
         for cutoff in self.audit.delete_cutoffs:
             store.audit = [r for r in store.audit if r.occurred_at >= cutoff]
         store.audit.extend(self.audit.pending)

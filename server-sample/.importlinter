@@ -25,6 +25,7 @@ source_modules =
     job_core.access
 forbidden_modules =
     job_core.job
+    job_core.runner
 
 [importlinter:contract:shared-independent]
 name = shared はどのコンテキストも import しない
@@ -34,3 +35,19 @@ source_modules =
 forbidden_modules =
     job_core.job
     job_core.access
+    job_core.runner
+
+[importlinter:contract:runner-layers]
+name = runner コンテキストの層: application → domain の向きのみ
+type = layers
+layers =
+    job_core.runner.application
+    job_core.runner.domain
+
+[importlinter:contract:job-independent-of-runner]
+name = job コンテキストは runner コンテキストを import しない
+type = forbidden
+source_modules =
+    job_core.job
+forbidden_modules =
+    job_core.runner

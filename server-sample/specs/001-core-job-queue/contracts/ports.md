@@ -64,7 +64,7 @@ def save(queue: Queue) -> None
 def append(record: AuditRecord) -> None                    # 同じ UoW の中で確定する
 def append_denied(record: AuditRecord) -> None             # 呼び出し時点で独立に確定する(本体がロールバックしても残る)
 def history_of(job_id) -> list[AuditRecord]                # outcome=SUCCEEDED のみ、occurred_at 順
-def query(filter, cursor, limit) -> Page[AuditRecord]      # 全件(DENIED を含む)
+def query(filter, cursor, limit) -> Page[AuditRecord]      # 全件(DENIED を含む)。filter は 002 で runner_id の条件を追加
 def delete_before(cutoff: datetime) -> int
 ```
 

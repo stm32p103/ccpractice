@@ -6,7 +6,7 @@ from datetime import datetime
 
 from job_core.access.principal import Principal
 from job_core.job.domain.audit import AuditOperation, AuditOutcome
-from job_core.shared.ids import JobId, SubjectId
+from job_core.shared.ids import JobId, RunnerId, SubjectId
 
 from ..audit_support import audited_denials
 from ..authorization import authorize_audit_read_all
@@ -30,6 +30,7 @@ class GetAuditLog:
         actor: str | None = None,
         operation: AuditOperation | str | None = None,
         outcome: AuditOutcome | str | None = None,
+        runner_id: str | None = None,
         cursor: str | None = None,
         limit: int = DEFAULT_LIMIT,
     ) -> AuditLogPage:
@@ -44,6 +45,7 @@ class GetAuditLog:
             actor=SubjectId(actor) if actor is not None else None,
             operation=AuditOperation(operation) if operation is not None else None,
             outcome=AuditOutcome(outcome) if outcome is not None else None,
+            runner_id=RunnerId(runner_id) if runner_id is not None else None,
         )
         with deps.uow_factory() as uow:
             page = uow.audit.query(audit_filter, cursor, limit)

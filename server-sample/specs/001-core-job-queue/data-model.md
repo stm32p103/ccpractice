@@ -180,7 +180,8 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 | `after` | `Mapping[str, JSON値]` | 変更後の値 |
 | `reason` | `Reason \| None` | 中断の理由など |
 | `outcome` | `SUCCEEDED \| DENIED` | |
-| `denial` | `{ code, required } \| None` | 拒否の内容。`code` は `permission_denied` または `runner_mismatch`。`required` は必要な権限の候補の一覧(`PermissionDenied.required` と同じ。`runner_mismatch` では空) |
+| `runner_id` | `RunnerId \| None` | 対象のランナー(002 で追加。既定 `None`。001 の操作では `ASSIGN` だけが付ける) |
+| `denial` | `{ code, required } \| None` | 拒否の内容。`code` は `permission_denied` または `runner_mismatch`(002 で `authentication_failed`、`invalid_declaration` を追加)。`required` は必要な権限の候補の一覧(`PermissionDenied.required` と同じ。`runner_mismatch` では空) |
 
 `before` / `after` に payload を入れない(監査ログは閲覧されるため、payload は不要な複製を作らない)。
 
@@ -193,10 +194,13 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 | `CANCEL_QUEUED` | `state`、`position` | `state` |
 | `ABORT_REQUEST` | `state` | `state`、`abort_requested: true` |
 | `ABORT_CONFIRM` | `state` | `state` |
-| `ASSIGN` | `state`、`position` | `state`、`runner_id` |
+| `ASSIGN` | `state`、`position` | `state`、`runner_id`、(002 の `RequestJob` のとき)`lease_id` |
 | `COMPLETE` | `state` | `state`、`superseded_abort`(該当時) |
 | `PURGE` | — | `jobs_deleted`、`audit_records_deleted`、`cutoffs` |
 | `READ_AUDIT_LOG` | — | —(監査ログ全体の閲覧。状態を変えないため、権限による拒否のときだけ `DENIED` として記録する) |
+
+002 が `AuditOperation` に加える値(ランナー管理の 17 種。`RUNNER_CREATE`、`RUNNER_REGISTER`、`RUNNER_ONLINE` など)と、その `before` / `after` は
+[002 data-model.md §7](../002-runner-management/data-model.md) を参照する。
 
 - 拒否の記録(権限による拒否と、割り当て先でないランナーからの終了の報告・停止の確認)は `outcome = DENIED`、`before` / `after` は空、`after` に試みた操作の要点(位置指定の有無など)を入れてよい。
 - **操作の経緯**(FR-026)= `job_id` が一致し、`outcome = SUCCEEDED` の記録を `occurred_at` 順に並べたもの。

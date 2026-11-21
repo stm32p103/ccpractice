@@ -38,6 +38,30 @@
 | T-7 | **待機列の不整合による実行の取り違え**: 同時の操作で、取り消したジョブが割り当てられる、同じジョブが 2 回割り当てられる | 集約の `version` による楽観的排他と、判定からのやり直し。待機列と待機中のジョブの一致を契約テストで検査する | T026、T029、T031、T039、T046、T050 | 実アダプタ(core-persistence)が排他の約束を破る → 同じ契約テストを実アダプタでも実行する |
 | T-8 | **開発環境・CI での取得物の改ざん**(サプライチェーン) | 取得先を公式の配布元と PyPI に限り(書き出し台帳 E15)、版を固定し、ハッシュ(配布物の SHA-256、`uv.lock`)で検証する。CI は `contents: read` のみで Secrets を使わない | T002、T006、T007、T074 | 公式の配布元自体の侵害は防げない |
 
+## 3A. 脅威と対策(002 ランナー管理)
+
+**根拠**: 憲章 S5・S6、書き出し台帳 E4・E16、002 の spec / research R9・R12・R13・R18。
+002 の範囲では、ランナーの本人性は「ランナーごとのトークン」だけに依る。ランナー PC と、その上のツール・設定は信頼の前提とする(P4)。
+
+**誰を信頼するか(002 の追加の前提)**
+
+| # | 前提 | 担当 |
+|---|---|---|
+| P5 | ランナーのトークンは、権限を持つ利用者が作成時・再発行時に受け取り、ランナー PC の保護された場所に置く。置き場所の保護は、PC の ACL と運用(009、004)に依る | 004、009 |
+| P6 | トークンを運ぶ通信は、イントラネット内で保護される(伝送の保護)。core は伝送を扱わない | 003 |
+| P7 | ランナー PC の内部で動作するツールは、ランナー(エージェント)を通じてだけ異常を申告する。ツールから PC の外へは送らない(台帳 E4、E8) | 004 |
+
+| # | 脅威 | 対策 | 担保するタスク・テスト | 残るリスク |
+|---|---|---|---|---|
+| T-R1 | **トークンの漏えい・再利用**: トークンが盗まれ、第三者がランナーとして振る舞う。保存先(DB)や監査ログ・応答からトークンが読み取られる | 256 ビットの乱数を発行時に 1 度だけ返し、保存は SHA-256 のハッシュだけ。照合は定数時間の比較。失効・再発行で旧トークンは直ちに使えない。トークンの値・ハッシュを、戻り値(発行以外)・監査記録・例外・`repr` に出さない | T005、T021、T022、T026、T059、T057、T058 | 漏えいに気付くまでの間の悪用は防げない(監査ログで気付く)。P5・P6 が破られた場合は防げない |
+| T-R2 | **別のランナーへのなりすまし**: あるランナーのトークンで、別のランナーとして登録・生存通知・申告・割り当ての要求をする | 認証した主体の `subject_id` と、操作の `runner_id` が一致しなければ `RunnerMismatch` で拒否し、監査ログに `DENIED` を残す。トークンは 1 台のランナーに結び付く | T025、T026、T057 | 同じランナーの正規のトークンを持つ者の操作は区別できない |
+| T-R3 | **トークンによる権限の昇格**: ランナーのトークンで、ランナーの作成・削除・maintenance・許可リストの変更・ジョブの提出をする | 認証した主体の権限を `runner.report` と `job.execute` の 2 つに固定する。可否は権限だけで判定する(原則 9) | T006、T024、T026、T057(FR-025) | P1 が破られた場合は防げない |
+| T-R4 | **能力の偽りの申告**: ランナーが偽の能力を申告し、本来実行できないジョブ(または実行させたくないジョブ)を受け取る | 能力のキーは許可リストに載ったものに限り、リスト外のキー・型の不一致は登録ごと拒否する(既定は空 = すべて拒否。憲章 S3)。許可リストの変更は `runner.manage` の権限と監査ログを要する | T017、T018、T034、T035、T031(SC-007) | **許可リストは「送ってよい項目」を制限するだけで、申告された値の正しさは保証しない(S5)。** 値の正しさは、ランナー PC と、能力を申告する設定・ツールが信頼できることに依る(P4)。誤った能力による割り当ては、監査ログ(能力の変更前後)で追える |
+| T-R5 | **機材の異常の偽りの申告**: 偽の異常の申告で割り当てを止め、ジョブの実行を妨害する | 申告はそのランナーのトークンだけが行え、申告と説明を監査ログに残す。権限を持つ主体は異常を手動で解除できる。実行中のジョブはシステムから止めない | T052、T053、T051 | 正規のランナーの侵害(P4)による妨害は防げない。気付くのは一覧(全員が閲覧できる)と監査ログ |
+| T-R6 | **異常の説明を経由した持ち出し**: 異常の説明の文字列に、PC 内の情報(ファイルの内容、環境変数、資格情報)を載せて core へ送る | 説明は 1〜200 文字、改行・制御文字なしに制限する(台帳 E4)。core は中身を解釈せず、説明に載せてよい内容は 004 と台帳で定める。能力の申告も、長さ・文字・個数を制限する | T010、T008、T052 | 制限内の短い文字列による少量の持ち出しは防げない。004 の送信前の検査と、台帳 E4 の運用で補う |
+| T-R7 | **生存通知・要求の大量送信**: 大量の要求で監査ログや処理を埋め、他の操作を妨げる | 状態が変わらない生存通知・割り当ての要求は監査ログに記録しない(状態の変化だけを記録)。認証の失敗の流量の制限は 003 | T049、T060 | 流量の制限は 003 の範囲。認証の失敗の記録は DENIED として残るため、大量の失敗は監査ログを増やす → 003 で制限する |
+| T-R8 | **割り当ての取り違え**: 同時の要求で、1 件のジョブが 2 台に割り当てられる、maintenance・異常のランナーに割り当てられる | 割り当てとリースの作成を 1 回の UoW で確定し、`version` の衝突で判定からやり直す。ランナーの状態は時刻から導き、定期処理の遅れに左右されない | T045、T046、T042、T043(SC-002、SC-006) | 実アダプタが排他の約束を破る → 同じ契約テストを実アダプタでも実行する |
+
 ## 4. 004 ランナーエージェント(004 の plan で追記)
 
 - 作業フォルダ外の情報の持ち出し(憲章 S1)、環境変数の継承、パスの逸脱、外部ツール自体の悪意。
@@ -58,6 +82,19 @@
 | T-6 | `.importlinter`、依存 0 の `core/pyproject.toml` | `core/tests/architecture/test_imports.py`、`test_vocabulary.py`、`uv run lint-imports` |
 | T-7 | `retry_policy.run_in_unit_of_work`、Fake の UoW の version の比較 | `contracts/persistence.py::UnitOfWorkContract`、`test_concurrency_*.py` |
 | T-8 | `ops/dev/setup-dev.ps1`、`ops/dev/dev.config.psd1`、`uv.lock`、CI のワークフロー | `ops/dev/tests/setup-dev.Tests.ps1`(ハッシュの不一致で停止、許可リスト外の拒否) |
+
+### 002 ランナー管理(実装の完了時点。2026-11-21)
+
+| 脅威 | 実装 | テスト |
+|---|---|---|
+| T-R1 | `runner/domain/token.py`(`hash_token`、`hmac.compare_digest`、`repr` の秘匿)、`shared/secret_generator.py`、`commands/token.py`(再発行 = 旧の失効 + 新の発行を同じ UoW)、`commands/authenticate.py` | `unit/runner/test_token.py`、`acceptance/runner/test_token_non_exposure.py`(任意の操作の列で、値とハッシュが戻り値・監査・例外に現れない。SC-008)、`test_us7_token.py`(失効・再発行・再発行と認証の同時実行)、`testing/.../runner_persistence.py::RunnerTokenRepositoryContract`(値を保持しない) |
+| T-R2 | `runner/application/authorization.py::require_self`(`RunnerIdentityMismatch` は 001 の `RunnerMismatch` の一種)、`runner/application/audit.py::audited` | `test_us7_token.py::test_us7_4_token_of_another_runner_is_rejected_for_every_runner_operation`、`test_us3_request_job.py::test_request_for_other_runner_is_rejected_and_audited` |
+| T-R3 | `commands/authenticate.py`(権限を 2 つに固定)、`access/permission.py`、`runner/application/authorization.py` | `unit/runner/test_authorization.py`(12 権限 4096 通り)、`test_authenticate.py`、`test_us7_token.py::test_fr025_runner_token_cannot_do_anything_but_runner_operations` |
+| T-R4 | `runner/domain/allowlist.py`(既定は空。リスト外・型の不一致・制限違反は登録ごと拒否。違反にキーと理由だけを含む)、`commands/register.py`、`commands/allowlist.py` | `unit/runner/test_allowlist.py`、`test_us1_create_and_register.py::test_us1_5_*`(SC-007)、`core/tests/contract/test_runner_requirement_schema.py`(申告の形のスキーマと検査の一致) |
+| T-R5 | `commands/fault.py`(申告はそのランナーのトークンだけ。手動の解除は `runner.manage`)、`runner/domain/runner.py` | `test_us5_equipment_fault.py`(申告・回復・手動の解除・実行中のジョブを止めない) |
+| T-R6 | `runner/domain/values.py::FaultDescription`(1〜200 文字、改行・制御文字なし)、値の長さ・文字・個数の制限 | `unit/runner/test_values.py`、`test_us5_equipment_fault.py::test_description_limits`、`test_allowlist.py::test_value_limits` |
+| T-R7 | `runner/application/commands/heartbeat.py`(状態の変化だけを記録)、`audit.py::append_connectivity_change` | `test_us4_heartbeat_and_lease.py::test_us4_1_online_transition_is_audited_only_on_change`、`test_audit_coverage.py`。流量の制限は 003 |
+| T-R8 | `commands/request_job.py`(1 回の UoW)、`job/application/commands/assign.py::assign_next_in`、`runner/domain/runner.py::state_at`(時刻から導出)、`testing/.../runner_repositories.py`(`version` の衝突と一意性) | `test_concurrency_request_job.py`、`test_us3_request_job.py`、`test_eligibility_consistency.py`(SC-001)、`RunnerUnitOfWorkContract`、`LeaseRepositoryContract` |
 
 ## 7. 改定の手続き
 

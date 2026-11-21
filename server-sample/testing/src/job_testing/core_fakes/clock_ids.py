@@ -48,3 +48,16 @@ class SequentialIdGenerator:
     def new_id(self) -> str:
         with self._lock:
             return f"{self._prefix}-{next(self._counter):06d}"
+
+
+class FakeSecretGenerator:
+    """連番から決定的にトークンを作る(テストの再現性)。形は本物と同じ rt_ + 43 文字。"""
+
+    def __init__(self) -> None:
+        self._counter = itertools.count(1)
+        self._lock = threading.Lock()
+
+    def new_token(self) -> str:
+        with self._lock:
+            number = next(self._counter)
+        return "rt_" + f"{number:06d}".ljust(43, "x")

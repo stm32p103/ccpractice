@@ -14,7 +14,7 @@ from job_core.job.application.ports import AuditFilter, OutboxStatus
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord, Denial
 from job_core.job.domain.events import JobCompleted
 from job_core.job.domain.states import JobState
-from job_core.shared.ids import JobId, SubjectId
+from job_core.shared.ids import JobId, RunnerId, SubjectId
 
 from ._builders import T0
 from .persistence import NewUow
@@ -28,6 +28,7 @@ def record(
     outcome: AuditOutcome = AuditOutcome.SUCCEEDED,
     operation: AuditOperation = AuditOperation.SUBMIT,
     actor: str = "alice",
+    runner_id: str | None = None,
 ) -> AuditRecord:
     return AuditRecord(
         record_id=record_id,
@@ -39,6 +40,7 @@ def record(
         outcome=outcome,
         after={"state": "queued"},
         denial=Denial("permission_denied", ("queue.schedule",)) if outcome is AuditOutcome.DENIED else None,
+        runner_id=RunnerId(runner_id) if runner_id else None,
     )
 
 
@@ -101,6 +103,20 @@ class AuditLogContract:
                 AuditFilter(since=T0 + timedelta(seconds=1), until=T0 + timedelta(seconds=3)), None, 10
             )
             assert [r.record_id for r in window.items] == ["a1", "a2"]
+
+    def test_query_filters_by_runner_id(self, new_uow: NewUow) -> None:
+        with new_uow() as uow:
+            uow.audit.append(record("r1a", job_id=None, runner_id="R1", operation=AuditOperation.RUNNER_CREATE))
+            uow.audit.append(record("r2a", job_id=None, runner_id="R2", operation=AuditOperation.RUNNER_CREATE))
+            uow.audit.append(record("plain"))
+            uow.audit.append_denied(record("r1d", job_id=None, runner_id="R1", outcome=AuditOutcome.DENIED))
+            uow.commit()
+        with new_uow() as uow:
+            page = uow.audit.query(AuditFilter(runner_id=RunnerId("R1")), None, 10)
+            assert sorted(r.record_id for r in page.items) == ["r1a", "r1d"]
+            ok = uow.audit.query(AuditFilter(runner_id=RunnerId("R1"), outcome=AuditOutcome.SUCCEEDED), None, 10)
+            assert [r.record_id for r in ok.items] == ["r1a"]
+            assert all(r.runner_id is None for r in uow.audit.query(AuditFilter(job_id=JobId("j1")), None, 10).items)
 
     def test_delete_before_removes_only_old_records(self, new_uow: NewUow) -> None:
         with new_uow() as uow:

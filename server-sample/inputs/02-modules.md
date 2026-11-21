@@ -44,8 +44,11 @@ Spec Kit のコマンドへの直接入力ではない。constitution・各 spec
 
 - ジョブ(Job): job_type、requirements(ランナーに求める能力の条件)、payload(コアは中身を解釈しない)、
   source_ref(参照用の出所情報。任意)、submitter、状態、結果。優先度は持たない(並び順は待機列が明示的に持つ)。
-- ランナー(Runner): 名前、capabilities(能力の集合。キーと値)、状態、最終応答時刻。
-- ランナー要件(Requirement): capabilities に対する条件(一致・包含・数値/版の比較)。
+- ランナー(Runner): 名前、capabilities(能力の集合。キーと値。値は 1 つの値または値の集合。ランナーの起動時の
+  自己申告だけで設定し、申告できるキーは許可リストに載ったものに限る)、状態(online / offline / 機材の異常 /
+  maintenance。保存せず、時刻と設定から導く)、最終応答時刻。(002 で決定)
+- ランナー要件(Requirement): capabilities に対する条件の集まり。比較の種類は一致・いずれかに一致・数値の大小・
+  版の大小・包含(集合に含まれる)の 5 種類(002 で決定)。
 - 状態: queued / running / succeeded / failed / cancelled(詳細は 004 と別途定義)。
 
 ## 依頼ファイルの扱い(コアの外)

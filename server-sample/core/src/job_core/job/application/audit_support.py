@@ -12,7 +12,7 @@ from typing import Any
 from job_core.access.principal import Principal
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord, Denial
 from job_core.job.domain.errors import PermissionDenied, RunnerMismatch
-from job_core.shared.ids import JobId, SubjectId
+from job_core.shared.ids import JobId, RunnerId, SubjectId
 
 from .ports import CoreDependencies
 
@@ -27,8 +27,9 @@ def make_record(
     after: Mapping[str, Any] | None = None,
     reason: str | None = None,
     on_behalf_of: SubjectId | None = None,
+    runner_id: RunnerId | None = None,
 ) -> AuditRecord:
-    """成功した操作の監査記録を作る。"""
+    """成功した操作の監査記録を作る。runner_id は、ランナーに関わる操作(割り当てなど)で付ける。"""
     return AuditRecord(
         record_id=deps.ids.new_id(),
         occurred_at=deps.clock.now(),
@@ -41,6 +42,7 @@ def make_record(
         after=after or {},
         reason=reason,
         on_behalf_of=on_behalf_of,
+        runner_id=runner_id,
     )
 
 

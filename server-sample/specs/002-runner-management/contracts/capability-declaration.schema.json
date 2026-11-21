@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-core:capability-declaration:1",
+  "title": "能力の申告(版 1)",
+  "description": "ランナーが起動時の登録で申告する能力の集合。値は 1 つの値(文字列)か、値の集合(文字列の配列)。キーと値の型は、さらに能力のキーの許可リストに一致しなければならない(本スキーマの外で検査する)。spec FR-003〜FR-005、research R2・R12、書き出し台帳 E4。",
+  "type": "object",
+  "maxProperties": 64,
+  "propertyNames": { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+  "additionalProperties": {
+    "oneOf": [
+      { "$ref": "#/$defs/text" },
+      {
+        "type": "array",
+        "maxItems": 64,
+        "items": { "$ref": "#/$defs/text" }
+      }
+    ]
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000-\\u001f\\u007f]+$" }
+  },
+  "examples": [
+    {},
+    { "k1": "a", "k2": "1.2.0", "set1": ["x", "y", "z"] }
+  ]
+}

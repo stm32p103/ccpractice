@@ -9,9 +9,10 @@ from __future__ import annotations
 from typing import Any
 
 from job_core.job.domain.definition import JobDefinition, Submitter
-from job_core.job.domain.errors import AnchorNotQueued, DuplicateQueuedJob, NoEligibleRunner
+from job_core.job.domain.errors import AnchorNotQueued, DuplicateQueuedJob, NoEligibleRunner, ValidationFailed
 from job_core.job.domain.job import Job
 from job_core.job.domain.values import Placement
+from job_core.shared.errors import JobCoreError
 from job_core.shared.ids import JobId
 
 from ..ports import CoreDependencies, UnitOfWork
@@ -27,7 +28,15 @@ def admit(
     retry_of: JobId | None,
 ) -> tuple[Job, int]:
     """受付の判定を行い、新しいジョブを待機列に並べる。(ジョブ, 位置) を返す。"""
-    if not deps.eligibility.any_registered_runner_may_satisfy(definition.requirement):
+    try:
+        eligible = deps.eligibility.any_registered_runner_may_satisfy(definition.requirement)
+    except JobCoreError as error:
+        # 要件の文法の誤り(002 の InvalidRequirement)は、提出の検証の誤りとして拒否する。
+        # job は runner を import しないため、例外の型ではなく code で判別する(US2-5)。
+        if error.code == "invalid_requirement":
+            raise ValidationFailed("requirement", str(error.details.get("reason", error.message))) from error
+        raise
+    if not eligible:
         raise NoEligibleRunner()
     queue = uow.queue.get()
     if placement is not None and placement.anchor not in queue:

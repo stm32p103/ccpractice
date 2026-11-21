@@ -9,7 +9,7 @@ from typing import Any
 
 from job_core.access.principal import PrincipalKind
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord
-from job_core.shared.ids import JobId, SubjectId
+from job_core.shared.ids import JobId, RunnerId, SubjectId
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ class AuditRecordView:
     outcome: AuditOutcome
     denial_code: str | None
     denial_required: tuple[str, ...]
+    runner_id: RunnerId | None = None
 
     @classmethod
     def of(cls, record: AuditRecord) -> AuditRecordView:
@@ -44,6 +45,7 @@ class AuditRecordView:
             outcome=record.outcome,
             denial_code=record.denial.code if record.denial else None,
             denial_required=record.denial.required if record.denial else (),
+            runner_id=record.runner_id,
         )
 
 
