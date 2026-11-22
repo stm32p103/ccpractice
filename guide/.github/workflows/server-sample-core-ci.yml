@@ -1,0 +1,37 @@
+# server-sample の core パッケージの検証(specs/001-core-job-queue の quickstart.md V1〜V11)。
+# 憲章 S4: 最小権限(contents: read)。Secrets を使わない。環境変数・ファイル一覧を出力しない。Git への書き込みをしない。
+# 外への通信は、書き出し台帳 E15 の取得のみ(uv・PowerShell のモジュールの公式の配布元、PyPI)。
+# uv と PowerShell のモジュールは ops/dev/setup-dev.ps1 が、版を固定してハッシュで検証して取得する。
+name: server-sample core
+
+on:
+  push:
+    paths:
+      - "server-sample/**"
+      - ".github/workflows/server-sample-core-ci.yml"
+  pull_request:
+    paths:
+      - "server-sample/**"
+      - ".github/workflows/server-sample-core-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: powershell
+        working-directory: server-sample
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 開発環境の構築(ops/dev/setup-dev.ps1)
+        run: .\ops\dev\setup-dev.ps1
+
+      - name: 検証 V1〜V11(ops/dev/setup-dev.ps1 -VerifyOnly)
+        run: .\ops\dev\setup-dev.ps1 -VerifyOnly
