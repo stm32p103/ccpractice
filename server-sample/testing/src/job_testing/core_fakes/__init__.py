@@ -23,6 +23,7 @@ from job_core.job.application import (
     ReportFinished,
     RescheduleJob,
     RetryJob,
+    SearchJobs,
     SubmitJob,
 )
 from job_core.job.application.ports import RunnerEligibility
@@ -87,6 +88,7 @@ class CoreFixture:
     confirm_stopped: ConfirmStopped
     purge: PurgeExpired
     list_jobs: ListJobs
+    search_jobs: SearchJobs
     get_job: GetJob
     get_job_history: GetJobHistory
     get_audit_log: GetAuditLog
@@ -155,6 +157,7 @@ def build_core(
         confirm_stopped=ConfirmStopped(core_deps),
         purge=PurgeExpired(core_deps),
         list_jobs=ListJobs(core_deps),
+        search_jobs=SearchJobs(core_deps),
         get_job=GetJob(core_deps),
         get_job_history=GetJobHistory(core_deps),
         get_audit_log=GetAuditLog(core_deps),

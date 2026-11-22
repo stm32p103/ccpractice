@@ -44,10 +44,15 @@ def find_retries_of(job_id) -> list[JobId]
 def exists(job_id) -> bool
 def list_by_states(states, cursor, limit) -> Page[Job]
 def delete_finished_before(cutoff: datetime) -> int
+def search(criteria: JobSearchCriteria, cursor, limit) -> Page[Job]   # 003 で追加(下記)
 ```
 
 約束: `delete_finished_before` は終了状態で `finished_at < cutoff` のジョブだけを消す。待機中・実行中は消さない(FR-031)。
 `find_queued_by_duplicate_key` は待機中のジョブだけを返す(FR-006)。
+
+**`search`(003 で追加。履歴の検索)**: `JobSearchCriteria`(`states`、`owner`、`submitted_from` / `submitted_to`。`submitted_from <= submitted_at < submitted_to`。すべて AND)で絞り込み、並びは `(submitted_at 降順, job_id 降順)`。
+`cursor` は直前の頁の最後の `(submitted_at, job_id)` を表す不透明な値で、続きはそれより後ろの行。途中の状態の変化・削除があっても、重複も欠落も起きない。不正な `cursor` は `ValidationFailed("cursor", ...)`(`list_by_states` と `AuditLog.query` も同じ)。
+対応するユースケースは `SearchJobs`(権限 `job.general`。payload を含まない `JobSummaryView` で返す)。
 
 ## QueueRepository
 

@@ -14,7 +14,7 @@ import pytest
 from job_core.access.principal import PrincipalKind
 from job_core.job.application.ports import UnitOfWork
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord
-from job_core.job.domain.errors import ConcurrencyConflict
+from job_core.job.domain.errors import ConcurrencyConflict, ValidationFailed
 from job_core.job.domain.states import JobState
 from job_core.job.domain.values import DuplicateKey, Reason
 from job_core.shared.ids import JobId, RunnerId, SubjectId
@@ -153,6 +153,15 @@ class UnitOfWorkContract:
 
 
 class JobRepositoryContract:
+    def test_list_by_states_with_an_invalid_cursor_is_a_validation_failure(self, new_uow: NewUow) -> None:
+        with new_uow() as uow:
+            uow.jobs.add(make_job("j1"))
+            uow.commit()
+        for bad in ("null", "garbage", "-1"):
+            with new_uow() as uow, pytest.raises(ValidationFailed) as info:
+                uow.jobs.list_by_states([JobState.QUEUED], bad, 10)
+            assert info.value.field == "cursor"
+
     def test_roundtrip_preserves_every_field(self, new_uow: NewUow) -> None:
         job = make_job("j1", source="repo-1", revision="abc", retry_of="j0")
         job.assign(RunnerId("r1"), T0 + timedelta(seconds=1))

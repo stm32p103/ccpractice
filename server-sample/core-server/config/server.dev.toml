@@ -1,0 +1,23 @@
+# 開発用の設定(メモリ上のリポジトリ、偽の認証基盤、127.0.0.1:8080)。profile = "dev" でだけ使える。
+profile = "dev"
+
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[api]
+allowed_networks = ["127.0.0.0/8", "::1/128"]
+cookie_secure = false          # HTTP の開発環境。Cookie の名前は session になる
+allowed_origins = []
+
+[access]
+config_path = "access.dev.toml"
+
+[identity]
+provider = "fake"
+
+[persistence]
+kind = "memory"
+
+[secrets]
+source = "env"

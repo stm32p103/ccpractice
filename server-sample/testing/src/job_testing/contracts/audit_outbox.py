@@ -12,6 +12,7 @@ import pytest
 from job_core.access.principal import PrincipalKind
 from job_core.job.application.ports import AuditFilter, OutboxStatus
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord, Denial
+from job_core.job.domain.errors import ValidationFailed
 from job_core.job.domain.events import JobCompleted
 from job_core.job.domain.states import JobState
 from job_core.shared.ids import JobId, RunnerId, SubjectId
@@ -103,6 +104,50 @@ class AuditLogContract:
                 AuditFilter(since=T0 + timedelta(seconds=1), until=T0 + timedelta(seconds=3)), None, 10
             )
             assert [r.record_id for r in window.items] == ["a1", "a2"]
+
+    def test_api_operations_are_stored_and_found(self, new_uow: NewUow) -> None:
+        """003 で追加した操作(ログイン・認証の失敗・認証情報・対応表)と ANONYMOUS の主体を保存・検索できる。"""
+        operations = [
+            AuditOperation.LOGIN,
+            AuditOperation.LOGOUT,
+            AuditOperation.AUTH_FAILED,
+            AuditOperation.SERVICE_CREDENTIAL_ISSUE,
+            AuditOperation.SERVICE_CREDENTIAL_REVOKE,
+            AuditOperation.ACCESS_CONFIG_CHANGE,
+        ]
+        with new_uow() as uow:
+            for i, op in enumerate(operations):
+                rec = record(f"x{i}", job_id=None, operation=op, at=T0 + timedelta(seconds=i))
+                if op is AuditOperation.AUTH_FAILED:
+                    rec = AuditRecord(
+                        record_id=rec.record_id,
+                        occurred_at=rec.occurred_at,
+                        actor=SubjectId("unauthenticated"),
+                        actor_kind=PrincipalKind.ANONYMOUS,
+                        operation=op,
+                        job_id=None,
+                        outcome=AuditOutcome.DENIED,
+                        denial=Denial("authentication_failed"),
+                    )
+                    uow.audit.append_denied(rec)
+                else:
+                    uow.audit.append(rec)
+            uow.commit()
+        with new_uow() as uow:
+            page = uow.audit.query(AuditFilter(), None, 20)
+            assert {r.operation for r in page.items} == set(operations)
+            failed = next(r for r in page.items if r.operation is AuditOperation.AUTH_FAILED)
+            assert failed.actor_kind is PrincipalKind.ANONYMOUS
+            assert failed.denial == Denial("authentication_failed")
+
+    def test_invalid_cursor_is_a_validation_failure(self, new_uow: NewUow) -> None:
+        with new_uow() as uow:
+            uow.audit.append(record("a1"))
+            uow.commit()
+        for bad in ("null", "garbage", "-1"):
+            with new_uow() as uow, pytest.raises(ValidationFailed) as info:
+                uow.audit.query(AuditFilter(), bad, 10)
+            assert info.value.field == "cursor"
 
     def test_query_filters_by_runner_id(self, new_uow: NewUow) -> None:
         with new_uow() as uow:

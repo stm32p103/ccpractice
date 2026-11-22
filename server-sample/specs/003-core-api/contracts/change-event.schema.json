@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-api:schema:change-event:v1",
+  "title": "ChangeEvent(GET /v1/events で配信する変更の通知。版 1)",
+  "type": "object",
+  "required": ["seq", "epoch", "type", "occurred_at"],
+  "additionalProperties": false,
+  "properties": {
+    "seq": { "type": "integer", "minimum": 1 },
+    "epoch": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "type": { "enum": ["job.changed", "runner.changed", "queue.changed", "resync", "auth.expired"] },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "subject": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["job", "runner"] },
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "state": { "type": "string", "maxLength": 32 },
+    "change": {
+      "enum": [
+        "submitted", "rescheduled", "assigned", "completed", "cancel_requested", "cancelled", "retried",
+        "created", "registered", "online", "offline", "maintenance_changed", "fault_changed", "deleted",
+        "lease_expired"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "enum": ["job.changed", "runner.changed"] } } },
+      "then": { "required": ["subject", "change"] }
+    }
+  ],
+  "$comment": "自由な文字列(payload、ログ、成果物、理由、異常の説明、能力の値、ジョブ定義の項目)を含めない(FR-018、001 FR-030)。新しい type / change の追加は、互換を保つ変更(クライアントは未知の値を無視する)。additionalProperties: false は、実装がこのスキーマにない項目を送らないことの検査(契約テスト)であり、クライアントが未知の項目を拒否する根拠ではない。"
+}

@@ -51,6 +51,14 @@ class AuditOperation(StrEnum):
     """生存通知。状態が変わらない通知は記録しないため、権限・ランナーの不一致による拒否のときだけ記録する。"""
     RUNNER_SWEEP = "runner_sweep"
     """定期処理の実行。権限による拒否のときだけ記録する(結果の変化は RUNNER_OFFLINE・LEASE_EXPIRED で残る)。"""
+    # --- 003 コア API(003 research.md R10) ---
+    LOGIN = "login"
+    LOGOUT = "logout"
+    AUTH_FAILED = "auth_failed"
+    """認証の失敗(actor は unauthenticated、actor_kind は ANONYMOUS)。同種の失敗は窓ごとに抑制して記録する。"""
+    SERVICE_CREDENTIAL_ISSUE = "service_credential_issue"
+    SERVICE_CREDENTIAL_REVOKE = "service_credential_revoke"
+    ACCESS_CONFIG_CHANGE = "access_config_change"
 
 
 class AuditOutcome(StrEnum):

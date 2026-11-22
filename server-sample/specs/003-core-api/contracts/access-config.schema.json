@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-api:schema:access-config:v1",
+  "title": "AccessConfig(アクセスの設定。TOML を読んだ後の構造。版 1)",
+  "type": "object",
+  "required": ["roles", "groups", "default_roles", "service"],
+  "additionalProperties": false,
+  "properties": {
+    "roles": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["permissions"],
+        "additionalProperties": false,
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "job.submit", "job.general", "queue.schedule", "job.cancel_queued", "job.force_abort",
+                "audit.read_all", "job.submit_on_behalf", "runner.manage", "access.manage"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "object",
+      "propertyNames": { "minLength": 1, "maxLength": 256 },
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" }
+      }
+    },
+    "default_roles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" }
+    },
+    "service": {
+      "type": "object",
+      "required": ["permission_ceiling"],
+      "additionalProperties": false,
+      "properties": {
+        "permission_ceiling": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["job.submit", "job.general", "queue.schedule", "job.cancel_queued", "job.force_abort", "job.submit_on_behalf"]
+          }
+        }
+      }
+    }
+  },
+  "$comment": "ロールに載せられない権限(job.execute、runner.report、retention.purge、runner.sweep)は enum に含めない。ロール名の参照の整合(groups・default_roles が roles に存在する)は、スキーマではなく読み込み時の検証で行う(data-model.md §2)。TOML の表 [roles.<名前>]、[groups]、default_roles、[service] がこの構造に対応する。"
+}

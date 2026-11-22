@@ -20,6 +20,8 @@ class PrincipalKind(StrEnum):
     SERVICE = "service"
     SYSTEM = "system"
     RUNNER = "runner"
+    ANONYMOUS = "anonymous"
+    """003: 認証に失敗した呼び出し(監査ログの actor_kind にだけ使う。権限は持たない)。"""
 
 
 @dataclass(frozen=True)

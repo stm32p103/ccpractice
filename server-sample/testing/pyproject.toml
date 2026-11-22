@@ -3,10 +3,11 @@ name = "job-testing"
 version = "0.1.0"
 description = "core のポートの Fake と契約テスト(テスト専用)"
 requires-python = ">=3.12"
-dependencies = ["job-core", "pytest>=8.3"]
+dependencies = ["job-core", "job-core-api", "pytest>=8.3", "httpx>=0.27"]
 
 [tool.uv.sources]
 job-core = { workspace = true }
+job-core-api = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.9,<0.14"]

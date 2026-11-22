@@ -62,6 +62,43 @@
 | T-R7 | **生存通知・要求の大量送信**: 大量の要求で監査ログや処理を埋め、他の操作を妨げる | 状態が変わらない生存通知・割り当ての要求は監査ログに記録しない(状態の変化だけを記録)。認証の失敗の流量の制限は 003 | T049、T060 | 流量の制限は 003 の範囲。認証の失敗の記録は DENIED として残るため、大量の失敗は監査ログを増やす → 003 で制限する |
 | T-R8 | **割り当ての取り違え**: 同時の要求で、1 件のジョブが 2 台に割り当てられる、maintenance・異常のランナーに割り当てられる | 割り当てとリースの作成を 1 回の UoW で確定し、`version` の衝突で判定からやり直す。ランナーの状態は時刻から導き、定期処理の遅れに左右されない | T045、T046、T042、T043(SC-002、SC-006) | 実アダプタが排他の約束を破る → 同じ契約テストを実アダプタでも実行する |
 
+## 3B. 脅威と対策(003 コア API)
+
+**根拠**: 憲章 S1〜S6、書き出し台帳 E4・E15・E16、003 の spec / research R4〜R12・R16・R18。
+003 は、コアを HTTP で公開する入口であり、人間・サービス・ランナーの 3 種類の主体の本人性を確認する。伝送の保護(P6)、認証基盤の実装(005)、サービスの配置と ACL(009)は、本 feature の外にある。
+
+**誰を信頼するか(003 の追加の前提)**
+
+| # | 前提 | 担当 |
+|---|---|---|
+| P8 | API サーバーはイントラネット内にあり、到達できる範囲はネットワーク(ファイアウォール、`allowed_networks`)で絞られる。インターネットには公開しない | 009、003 |
+| P9 | 認証基盤(`IdentityProvider` の実装)は、確認した本人性と所属グループを正しく返す。その実装は組織の認証基盤に依る | 005 |
+| P10 | アクセス設定(対応表)と `server.toml` のファイルは、管理者だけが書き換えられる(ACL) | 009 |
+| P11 | API サーバーのプロセスは 1 つである(通知の仲介と定期処理がプロセス内にあるため) | 003、008 |
+
+| # | 脅威 | 対策 | 担保するタスク・テスト | 残るリスク |
+|---|---|---|---|---|
+| T-A1 | **認証情報の漏えい**: ログ・監査・エラー・応答・DB に値が残る | ハッシュ(SHA-256)だけを保存し、値は発行時の 1 度だけ返す。アクセスログに `Authorization`・Cookie・クエリ・本文を出さない。`repr` の秘匿 | T010、T016、T019、T033、T065、T076 | 発行の応答を受け取った側の保管は、利用者・サービスの運用に依る |
+| T-A2 | **失効の遅れ**: 失効した認証情報が使い続けられる | 呼び出しごとの照合(キャッシュなし)。SSE は 15 秒ごとに認証と権限を再確認する | T017、T041、T055(SC-004) | SSE の購読では、失効から最大 15 秒の遅れがある |
+| T-A3 | **権限の昇格**: サービス用の認証情報に過大な権限を付ける、人間のロールに実行用の権限を載せる、一般の利用者が代理提出する | サービス用の権限の上限、ロールに載せられない権限の設定検証、代理提出は `job.submit_on_behalf` のみ(コアが判定) | T011、T032、T033、T095(SC-003、SC-005) | 設定の上限そのものが過大な場合は防げない(P10) |
+| T-A4 | **ランナーによる越権**: 他のランナーの操作、利用者向けの操作 | ランナーの識別子を URL に含めず、認証した主体から取る。ランナーの権限は 2 つに固定する(002 T-R3) | T036、T038(SC-004) | ランナーの正規のトークンを持つ者の操作は区別できない(002 T-R2) |
+| T-A5 | **CSRF・オープンリダイレクト・セッションの固定** | Cookie は `__Host-session`・`HttpOnly`・`SameSite=Strict`。Cookie での状態変更は `Origin` を検査。`return_to` は同一オリジンの相対パスだけ。ログインのたびに新しいセッションの値を発行 | T020、T040、T045 | `Secure` を外した構成(HTTP)では、盗聴が成立する。P6・P8 に依る |
+| T-A6 | **イントラネット外からの到達** | bind するアドレス、`allowed_networks`(認証より前に拒否)、ファイアウォール | T019、T021、T103 | 接続元の許可リストは接続のアドレスだけを見る。プロキシ構成では、プロキシのアドレスを許可する運用になり、接続元の絞り込みが弱まる |
+| T-A7 | **認証失敗の洪水**: 総当たり、監査ログの水増し | 値が 256 ビットの乱数で、総当たりが成立しない。失敗の記録は、同じ接続元・同じ種類を窓(既定 1 分)ごとに 2 件以内に抑える | T016、T017 | 窓の内の失敗の個別の記録は残らない(件数だけ) |
+| T-A8 | **エラー・イベント経由の情報の持ち出し・漏えい**: payload、ログ、異常の説明、能力の値、他人の情報 | エラーは写像の表だけを通す(例外の文字列を出さない)。イベントに自由な文字列を含めず、項目をスキーマで固定する | T018、T056、T063、T065、T066 | 識別子(ジョブ ID など)は通知に載る。閲覧権限(`job.general`)を持つ主体にだけ配信する |
+| T-A9 | **偽の認証基盤の混入**: 試験用の実装が本番で有効になる | `profile != "dev"` では、Fake の認証基盤・メモリ上のリポジトリ・環境変数の `SecretSource` の選択を拒否する。Fake は `testing` に置き、本番のパッケージに含めない | T087、T096 | 設定ファイルの `profile` の書き換えは防げない(P10) |
+| T-A10 | **対応表の改ざん・誤設定** | 変更は明示の再読み込みだけ。検証してから差し替え、失敗なら現在の対応表を保つ。差分を監査ログに残す(`ACCESS_CONFIG_CHANGE`) | T011、T042、T046 | ファイルの ACL(P10)が破られた場合は防げない。所属グループの変更は、次のログインまで反映されない |
+| T-A11 | **SSE の資源の枯渇** | 接続数の上限(200)、購読者ごとの送信待ちの上限、遅い購読者の切断、認証の再確認 | T054、T055、T057 | 上限の範囲内の正規の接続による占有は防げない |
+| T-A12 | **外部への書き出しの混入**: テレメトリ、認証基盤アダプタの無断の送信 | `httpx`・`requests`・`socket` などの直接の利用を検査で禁止。偽のサーバーで外向きの通信 0 件を検証。アダプタの出力先は台帳に追加してレビューを受ける(憲章 S2) | T092、T093(SC-009) | 実アダプタ(005)の通信は、005 の台帳のレビューに依る |
+
+**残るリスク(003 全体)**
+
+1. **所属グループの反映の遅れ**: セッションはログイン時の所属グループを保持する。認証基盤での所属の変更は、次のログイン(セッションの期限は絶対 12 時間・無操作 2 時間)まで反映されない。管理者による一括の失効で即時に切れる。
+2. **接続元の許可リストの限界**: 接続のアドレスだけを見る(T-A6)。
+3. **プロセスが 1 つであることへの依存**: 通知の仲介(リングバッファ)と定期処理がプロセス内にある(P11)。複数のプロセスでは、通知の取りこぼしと定期処理の重複が起きる。
+
+「実装との対応」の表は、003 の実装の完了時点で、6 節に追記する(T097)。
+
 ## 4. 004 ランナーエージェント(004 の plan で追記)
 
 - 作業フォルダ外の情報の持ち出し(憲章 S1)、環境変数の継承、パスの逸脱、外部ツール自体の悪意。
@@ -95,6 +132,25 @@
 | T-R6 | `runner/domain/values.py::FaultDescription`(1〜200 文字、改行・制御文字なし)、値の長さ・文字・個数の制限 | `unit/runner/test_values.py`、`test_us5_equipment_fault.py::test_description_limits`、`test_allowlist.py::test_value_limits` |
 | T-R7 | `runner/application/commands/heartbeat.py`(状態の変化だけを記録)、`audit.py::append_connectivity_change` | `test_us4_heartbeat_and_lease.py::test_us4_1_online_transition_is_audited_only_on_change`、`test_audit_coverage.py`。流量の制限は 003 |
 | T-R8 | `commands/request_job.py`(1 回の UoW)、`job/application/commands/assign.py::assign_next_in`、`runner/domain/runner.py::state_at`(時刻から導出)、`testing/.../runner_repositories.py`(`version` の衝突と一意性) | `test_concurrency_request_job.py`、`test_us3_request_job.py`、`test_eligibility_consistency.py`(SC-001)、`RunnerUnitOfWorkContract`、`LeaseRepositoryContract` |
+
+### 003 コア API(実装の完了時点。2026-11-22。本番の認証基盤(005)は未接続)
+
+| 脅威 | 実装 | テスト |
+|---|---|---|
+| T-A1 | `access/secrets.py`(SHA-256、`hmac.compare_digest`)、`access/models.py`(`repr` の秘匿)、`access/credentials.py`(値は発行の応答だけ。監査は権限の一覧と識別子だけ)、`http/middleware.py`(アクセスログに `Authorization`・Cookie・クエリ・本文を出さない)、`http/errors.py`(例外の文字列を出さない)、`core-server/__main__.py`(uvicorn のアクセスログを無効化) | `unit/test_secrets.py`、`unit/test_access_models.py`、`unit/test_service_credentials.py`(Hypothesis: 値・ハッシュが監査・一覧に現れない)、`unit/test_middleware.py`、`acceptance/test_logging.py`、`contract/test_problem_disclosure.py`(Hypothesis) |
+| T-A2 | `access/authenticate.py`(呼び出しごとの照合。キャッシュなし)、`events/sse.py`(15 秒ごとに認証と `job.general` を再確認。無操作の期限は延長しない) | `unit/test_authenticate.py::test_revocation_takes_effect_on_the_next_call`、`acceptance/test_us2_*.py`・`test_us3_*.py`(失効の即時性)、`acceptance/test_events.py::test_us6_3_*`、`test_idle_timeout_is_not_extended_by_an_open_stream` |
+| T-A3 | `access/config.py`(ロールに載せられない権限・サービスの上限の検証)、`access/credentials.py`(上限の部分集合)、`access/authenticate.py`(現在の上限との共通部分だけを有効)、コアの `authorize_submit`(代理提出は `job.submit_on_behalf`) | `unit/test_access_config.py`、`unit/test_service_credentials.py`、`unit/test_authn_authz.py`(2^6 の権限 × 人間・サービス × 9 操作)、`acceptance/test_us2_service_delegation.py` |
+| T-A4 | `http/routers/runner_protocol.py`(ランナーの識別子を URL に含めず、認証した主体から取る)、`access/authenticate.py`(`AuthenticateRunner`。権限は 2 つに固定) | `acceptance/test_us3_runner_protocol.py`(URL に識別子がない、別のランナーの報告は `runner_mismatch`、利用者向けの操作は `403`) |
+| T-A5 | `http/routers/auth.py`(`__Host-session`・HttpOnly・SameSite=Strict、`return_to` の検査、ログインのたびに新しい値)、`http/authn.py`(Cookie の状態変更は `Origin` を検査) | `acceptance/test_us4_login_and_roles.py`、`unit/test_authn_dependency.py` |
+| T-A6 | `settings.py::network_allowed`、`http/middleware.py`(認証より前に `403 network_not_allowed`。`X-Forwarded-For` を信用しない) | `unit/test_settings.py`、`unit/test_middleware.py`、`acceptance/test_skeleton.py`。サーバーの bind・ファイアウォールは 009 |
+| T-A7 | `access/audit.py::AuthFailureAuditor`(窓ごとに最初の 1 件と件数つきの 1 件だけ)、`scheduler.py`(窓の確定) | `unit/test_auth_audit.py`(洪水で窓ごとに 2 件以内)、`unit/test_scheduler.py` |
+| T-A8 | `http/errors.py`(写像の表だけ。`detail` は固定の文面。検証エラーは位置と種類だけ)、`events/ports.py::PendingChange`(自由な文字列の項目がない型)、`events/sse.py::event_json` | `contract/test_problem.py`、`contract/test_problem_disclosure.py`、`contract/test_change_event_schema.py`、`acceptance/test_events.py::test_events_carry_no_free_text`、`testing/.../change_broker.py` |
+| T-A9 | `core-server/settings.py`(`profile != "dev"` で Fake・メモリを拒否。環境変数の `SecretSource` は警告)、`core-server/wiring.py`(試験用の実装は dev のときだけ import) | `core-server/tests/test_settings.py`、`test_profile_guard.py` |
+| T-A10 | `access/config.py`(検証してから差し替え)、`access/config_reload.py`(失敗で現在の対応表を保つ。差分を監査) | `acceptance/test_us4_login_and_roles.py::test_us4_2_*`、`unit/test_access_config*.py` |
+| T-A11 | `settings.py`(接続数 200・送信待ち 100)、`events/broker.py`(`publish` はブロックしない。遅い購読者を切断)、`events/sse.py::SseConnections` | `unit/test_broker_contract.py`(`ChangeBrokerContract`)、`acceptance/test_events.py::test_connection_limit_*`、`perf/test_api_perf.py` |
+| T-A12 | `tests/architecture/test_forbidden_apis.py`(通信 API の直接の利用を禁止)、`app.py::TELEMETRY_DISABLED`(**FastAPI の組み込みのテレメトリは、環境変数 `FASTAPI_OTEL_AUTO_CONFIGURE` で外部へ書き出せ、検証エラーの入力値や例外の内容も載りうるため、すべて無効にする**) | `acceptance/test_egress.py`(外向きの接続 0 件、テレメトリの無効化)、`architecture/test_forbidden_apis.py`、`architecture/test_vocabulary.py` |
+
+**実装の完了時点で確認した、残るリスクの追加**: FastAPI などの依存のライブラリが、将来の版で外部への通信(テレメトリなど)を既定で有効にする可能性がある。`uv.lock` で版を固定し、版を上げるときに `test_egress.py`(外向きの接続の検知)を通すことで検出する。
 
 ## 7. 改定の手続き
 

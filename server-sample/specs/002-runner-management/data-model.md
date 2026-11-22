@@ -148,6 +148,7 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 | ランナーの定期処理 | `runner.sweep` |
 
 ランナーのトークンで認証した主体は `{runner.report, job.execute}` だけを持つ(FR-025)。
+003 が `access.manage`(アクセスの管理)を加え、権限は合計 13 種(2^13 = 8192 通りの網羅。003 data-model.md §6)。
 
 ---
 

@@ -1,0 +1,31 @@
+# アクセス設定(対応表)の雛形。所属グループ → ロール → 権限。秘密情報を含めない。
+# 検証に通らない設定は読み込まれない(現在の対応表が保たれる)。変更の反映: POST /v1/access/reload(access.manage)。
+# ロール名は汎用の名前を使う。所属グループの識別子は、認証基盤が返す文字列(コアは意味を解釈しない)。
+
+# どの所属グループにも当たらない利用者のロール(空にすると、既定で何も許可しない)
+default_roles = ["viewer"]
+
+[roles.viewer]
+permissions = ["job.general"]
+
+[roles.member]
+permissions = ["job.general", "job.submit"]
+
+[roles.operator]
+permissions = ["job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort"]
+
+[roles.admin]
+permissions = [
+  "job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort",
+  "audit.read_all", "runner.manage", "access.manage",
+]
+
+# 所属グループ → ロール(認証基盤が返すグループの識別子に置き換える)
+[groups]
+"group-members" = ["member"]
+"group-operators" = ["operator"]
+"group-admins" = ["admin"]
+
+# サービス用の認証情報に付与できる権限の上限
+[service]
+permission_ceiling = ["job.submit", "job.general", "job.submit_on_behalf", "queue.schedule"]

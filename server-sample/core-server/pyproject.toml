@@ -1,0 +1,23 @@
+[project]
+name = "job-core-server"
+version = "0.1.0"
+description = "コンポジションルート: ポート実装を選び、API を組み立てて起動する"
+requires-python = ">=3.12"
+dependencies = ["job-core", "job-core-api", "job-core-persistence", "uvicorn>=0.32"]
+
+[project.optional-dependencies]
+# 開発用の構成(profile = "dev")が使う試験用の実装。本番の構成には含めない(T-A9)
+dev = ["job-testing"]
+
+[tool.uv.sources]
+job-core = { workspace = true }
+job-core-api = { workspace = true }
+job-core-persistence = { workspace = true }
+job-testing = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "job_core_server"

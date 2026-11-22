@@ -1,0 +1,16 @@
+[project]
+name = "job-core-api"
+version = "0.1.0"
+description = "コアを HTTP API(/v1)として公開する層(FastAPI)。永続化の実装には依存しない"
+requires-python = ">=3.12"
+dependencies = ["job-core", "fastapi>=0.115", "pydantic>=2.9", "uvicorn>=0.32"]
+
+[tool.uv.sources]
+job-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "job_core_api"

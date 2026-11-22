@@ -65,6 +65,24 @@ class AuditFilter:
         )
 
 
+@dataclass(frozen=True)
+class JobSearchCriteria:
+    """ジョブの履歴の検索条件(003。すべて AND)。submitted_from <= submitted_at < submitted_to。"""
+
+    states: frozenset[JobState] | None = None
+    owner: SubjectId | None = None
+    submitted_from: datetime | None = None
+    submitted_to: datetime | None = None
+
+    def matches(self, job: Job) -> bool:
+        return (
+            (self.states is None or job.state in self.states)
+            and (self.owner is None or job.submitter.owner == self.owner)
+            and (self.submitted_from is None or job.submitted_at >= self.submitted_from)
+            and (self.submitted_to is None or job.submitted_at < self.submitted_to)
+        )
+
+
 class JobRepository(Protocol):
     def get(self, job_id: JobId) -> Job | None: ...
     def add(self, job: Job) -> None: ...
@@ -75,6 +93,11 @@ class JobRepository(Protocol):
     def exists(self, job_id: JobId) -> bool: ...
     def list_by_states(self, states: Iterable[JobState], cursor: str | None, limit: int | None) -> Page[Job]: ...
     def delete_finished_before(self, cutoff: datetime) -> int: ...
+    def search(self, criteria: JobSearchCriteria, cursor: str | None, limit: int) -> Page[Job]:
+        """並びは (submitted_at 降順, job_id 降順)。cursor は直前の頁の最後の (submitted_at, job_id) を表す
+        不透明な値で、続きはそれより後ろ(より古い)の行。途中の状態の変化・削除で重複も欠落も起きない。
+        limit は 1 以上。不正な cursor は ValidationFailed("cursor", ...)。"""
+        ...
 
 
 class QueueRepository(Protocol):

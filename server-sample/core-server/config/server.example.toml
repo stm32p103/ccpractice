@@ -1,0 +1,25 @@
+# サーバーの設定の雛形(本番・試行)。秘密情報を書かない(接続の秘密は SecretSource から名前で取得する)。
+# profile = "dev" 以外では、Fake の認証基盤・メモリ上のリポジトリは選べない(起動が拒否される)。
+profile = "prod"
+
+[server]
+host = "192.0.2.10"            # イントラネット側のアドレス(待ち受けるインターフェース)
+port = 8080
+
+[api]
+allowed_networks = ["192.0.2.0/24"]   # 接続元の許可リスト(CIDR)。ファイアウォールと併用する
+cookie_secure = true
+allowed_origins = []                   # 空 = 同一オリジンだけ
+
+[access]
+config_path = "access.toml"
+
+[identity]
+provider = "external"          # 外部の認証基盤のアダプタ(005)
+
+[persistence]
+kind = "postgres"
+dsn_secret = "JOB_DATABASE_URL"   # 接続の秘密の名前。値は設定に書かない
+
+[secrets]
+source = "env"                 # 開発・試験専用。本番の保管機能の実装は 009 の結果に従う(警告が出る)

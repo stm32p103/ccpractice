@@ -56,7 +56,7 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 |---|---|---|
 | `subject_id` | `SubjectId` | 認証済みの主体(呼び出し元が検証済み。FR-024) |
 | `permissions` | `frozenset[Permission]` | [contracts/application-api.md の権限表](contracts/application-api.md#権限) |
-| `kind` | `HUMAN \| SERVICE \| SYSTEM \| RUNNER` | 監査ログの表示用。可否の判定には使わない(判定は権限だけで行う) |
+| `kind` | `HUMAN \| SERVICE \| SYSTEM \| RUNNER \| ANONYMOUS` | 監査ログの表示用。可否の判定には使わない(判定は権限だけで行う)。`ANONYMOUS` は 003 で追加(認証に失敗した呼び出しの `actor_kind`。権限を持たない) |
 
 `kind` は監査ログの `AuditRecord.actor_kind` に写すためだけに使う。ランナーの操作(割り当て・終了の報告・停止の確認)や保持期間による削除の可否も、
 `kind` ではなく `Principal.permissions`(`job.execute`、`retention.purge`)で判定する(憲章 原則 9。contracts/application-api.md「権限」)。
@@ -172,7 +172,7 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 | `record_id` | 文字列 | 一意 |
 | `occurred_at` | `datetime`(UTC) | 保持期間の起点 |
 | `actor` | `SubjectId` | 操作者(提出代行では実際に提出した主体) |
-| `actor_kind` | `HUMAN \| SERVICE \| SYSTEM \| RUNNER` | |
+| `actor_kind` | `HUMAN \| SERVICE \| SYSTEM \| RUNNER \| ANONYMOUS` | |
 | `on_behalf_of` | `SubjectId \| None` | 提出代行の名義上の提出者(FR-024) |
 | `operation` | `AuditOperation` | 下表 |
 | `job_id` | `JobId \| None` | 対象(削除の集計では `None`) |
@@ -198,6 +198,9 @@ core のドメインモデル(Python の値オブジェクト・集約)を定め
 | `COMPLETE` | `state` | `state`、`superseded_abort`(該当時) |
 | `PURGE` | — | `jobs_deleted`、`audit_records_deleted`、`cutoffs` |
 | `READ_AUDIT_LOG` | — | —(監査ログ全体の閲覧。状態を変えないため、権限による拒否のときだけ `DENIED` として記録する) |
+
+003 が `AuditOperation` に加える値(`LOGIN`、`LOGOUT`、`AUTH_FAILED`、`SERVICE_CREDENTIAL_ISSUE`、`SERVICE_CREDENTIAL_REVOKE`、`ACCESS_CONFIG_CHANGE`)は、
+[003 research.md R10](../003-core-api/research.md) を参照する(`job_id` を持たない。認証情報の値・ハッシュは記録しない)。
 
 002 が `AuditOperation` に加える値(ランナー管理の 17 種。`RUNNER_CREATE`、`RUNNER_REGISTER`、`RUNNER_ONLINE` など)と、その `before` / `after` は
 [002 data-model.md §7](../002-runner-management/data-model.md) を参照する。

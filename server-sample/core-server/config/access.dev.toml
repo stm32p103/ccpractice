@@ -1,0 +1,25 @@
+# 開発用のアクセス設定(対応表)。偽の認証基盤の proof の groups に、下のグループを指定する。
+default_roles = ["viewer"]
+
+[roles.viewer]
+permissions = ["job.general"]
+
+[roles.member]
+permissions = ["job.general", "job.submit"]
+
+[roles.operator]
+permissions = ["job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort"]
+
+[roles.admin]
+permissions = [
+  "job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort",
+  "audit.read_all", "runner.manage", "access.manage",
+]
+
+[groups]
+"g-member" = ["member"]
+"g-operator" = ["operator"]
+"g-admin" = ["admin"]
+
+[service]
+permission_ceiling = ["job.submit", "job.general", "job.submit_on_behalf", "queue.schedule"]

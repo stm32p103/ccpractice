@@ -16,9 +16,10 @@ from datetime import datetime
 from types import TracebackType
 from typing import Self
 
-from job_core.job.application.ports import AuditFilter, OutboxEntry, OutboxStatus, Page
+from job_core.job.application.ports import AuditFilter, JobSearchCriteria, OutboxEntry, OutboxStatus, Page
+from job_core.job.application.search_cursor import decode_search_cursor, encode_search_cursor
 from job_core.job.domain.audit import AuditOutcome, AuditRecord
-from job_core.job.domain.errors import ConcurrencyConflict
+from job_core.job.domain.errors import ConcurrencyConflict, ValidationFailed
 from job_core.job.domain.events import JobCompleted
 from job_core.job.domain.job import Job
 from job_core.job.domain.queue import Queue
@@ -56,7 +57,12 @@ class InMemoryStore:
 
 
 def _page(items: list[object], cursor: str | None, limit: int | None) -> tuple[list[object], str | None]:
-    start = int(cursor) if cursor else 0
+    try:
+        start = int(cursor) if cursor else 0
+    except ValueError:
+        raise ValidationFailed("cursor", "不正な cursor") from None
+    if start < 0:
+        raise ValidationFailed("cursor", "不正な cursor")
     if limit is None:
         return items[start:], None
     end = start + limit
@@ -120,6 +126,21 @@ class InMemoryJobRepository:
             jobs.sort(key=lambda j: (j.submitted_at, j.job_id))
         items, next_cursor = _page(list(jobs), cursor, limit)
         return Page([copy.deepcopy(j) for j in items if isinstance(j, Job)], next_cursor)
+
+    def search(self, criteria: JobSearchCriteria, cursor: str | None, limit: int) -> Page[Job]:
+        if limit < 1:
+            raise ValueError("limit は 1 以上")
+        matched = [job for job in self._merged().values() if criteria.matches(job)]
+        matched.sort(key=lambda j: (j.submitted_at, j.job_id), reverse=True)
+        if cursor is not None:
+            after_at, after_id = decode_search_cursor(cursor)
+            matched = [j for j in matched if (j.submitted_at, j.job_id) < (after_at, after_id)]
+        items = matched[:limit]
+        next_cursor = None
+        if len(matched) > limit:
+            last = items[-1]
+            next_cursor = encode_search_cursor(last.submitted_at, last.job_id)
+        return Page([copy.deepcopy(j) for j in items], next_cursor)
 
     # 変更 -------------------------------------------------------------------
 

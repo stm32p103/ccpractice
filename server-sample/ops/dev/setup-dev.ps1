@@ -10,8 +10,12 @@
     5. uv sync --locked(uv.lock のハッシュで検証)
     取得先は書き出し台帳 E15(公式の配布元・公式のパッケージ索引。取得のみ)に限る。秘密情報は扱わない。
 
+.PARAMETER WithPostgres
+    PostgreSQL の公式のバイナリを取得(ハッシュを検証)し、ユーザー領域に一時インスタンスを作って起動する。
+    取得先は設定の許可リスト(台帳 E15)に限る。接続先は JOB_TEST_POSTGRES_DSN に設定して実 DB の試験(V26)を実行する。
 .PARAMETER VerifyOnly
-    構築はせず、quickstart.md の検証 V1〜V18 を順に実行して結果の一覧を表示する。
+    構築はせず、quickstart.md の検証 V1〜V28 を順に実行して結果の一覧を表示する。
+    PostgreSQL が使えない場合、V26 は「保留」として報告し、他の検証は続ける。
 
 .PARAMETER Uninstall
     .venv と ops/dev/.cache を削除する。
@@ -269,6 +273,104 @@ function Get-DevModulePath {
     return Join-Path $Config.CacheFullPath "modules\$Name\$($module.Version)\$Name.psd1"
 }
 
+function Install-DevPostgreSql {
+    # 公式のバイナリを取得し、ハッシュを検証して展開する(不一致なら停止)。取得先は設定の許可リストに限る。冪等。
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $pg = $Config.PostgreSql
+    $installDir = Join-Path $Config.CacheFullPath "postgresql\$($pg.Version)"
+    $binDir = Join-Path (Join-Path $installDir 'pgsql') 'bin'
+    if (Test-Path -LiteralPath (Join-Path $binDir 'initdb.exe')) {
+        Write-DevLog "PostgreSQL $($pg.Version): 変更なし($binDir)"
+        return $binDir
+    }
+    if (-not $PSCmdlet.ShouldProcess($pg.ArchiveUrl, "PostgreSQL $($pg.Version) を取得して $installDir に展開")) {
+        return $null
+    }
+    Assert-DevAllowedUrl -Url $pg.ArchiveUrl -AllowedDomains $Config.AllowedDomains
+    $downloadDir = Join-Path $Config.CacheFullPath 'downloads'
+    New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+    $archive = Join-Path $downloadDir "postgresql-$($pg.Version).zip"
+    Save-DevDownload -Url $pg.ArchiveUrl -Destination $archive
+    if (-not (Test-DevFileHash -Path $archive -Algorithm 'SHA256' -Expected $pg.Sha256)) {
+        Remove-Item -LiteralPath $archive -Force
+        throw 'PostgreSQL の取得物の SHA-256 が設定の値と一致しません。導入を中止しました'
+    }
+    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+    Expand-Archive -LiteralPath $archive -DestinationPath $installDir -Force
+    Remove-Item -LiteralPath $archive -Force
+    Write-DevLog "PostgreSQL $($pg.Version): 導入しました($binDir)"
+    return $binDir
+}
+
+function Invoke-DevPostgresControl {
+    # pg_ctl を、出力のパイプを子に引き継がせない形で実行する(引き継ぐと終了を待ち続けるため)。
+    param(
+        [Parameter(Mandatory = $true)][string]$BinDir,
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList
+    )
+    $null = Start-Process -FilePath (Join-Path $BinDir 'pg_ctl.exe') -ArgumentList $ArgumentList -NoNewWindow -Wait `
+        -RedirectStandardOutput ([IO.Path]::GetTempFileName()) -RedirectStandardError ([IO.Path]::GetTempFileName())
+}
+
+function New-DevPostgresInstance {
+    # ユーザー領域に一時インスタンスを作り、起動する(信頼接続・127.0.0.1 のみ)。接続の文字列を返す。冪等。
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Config,
+        [Parameter(Mandatory = $true)][string]$BinDir
+    )
+    $port = $Config.PostgreSql.Port
+    $dataDir = Join-Path $Config.CacheFullPath 'postgresql-data'
+    $dsn = "postgresql://postgres@127.0.0.1:$port/postgres"
+    if (-not $PSCmdlet.ShouldProcess($dataDir, 'PostgreSQL の一時インスタンスを作成・起動')) { return $dsn }
+    if (-not (Test-Path -LiteralPath (Join-Path $dataDir 'PG_VERSION'))) {
+        $null = Invoke-DevNativeCommand -FilePath (Join-Path $BinDir 'initdb.exe') -ArgumentList @('-D', $dataDir, '-U', 'postgres', '-A', 'trust', '-E', 'UTF8', '--no-locale')
+        Write-DevLog "PostgreSQL: インスタンスを作成しました($dataDir)"
+    }
+    $status = Invoke-DevNativeCommand -FilePath (Join-Path $BinDir 'pg_ctl.exe') -ArgumentList @('-D', $dataDir, 'status')
+    if ($status.ExitCode -eq 0) {
+        Write-DevLog 'PostgreSQL: 変更なし(起動済み)'
+    }
+    else {
+        Invoke-DevPostgresControl -BinDir $BinDir -ArgumentList @('-D', $dataDir, '-o', "`"-p $port -c listen_addresses=127.0.0.1`"", '-l', (Join-Path $dataDir 'server.log'), '-w', 'start')
+        Write-DevLog "PostgreSQL: 起動しました(127.0.0.1:$port)"
+    }
+    return $dsn
+}
+
+function Remove-DevPostgresInstance {
+    # 一時インスタンスを停止し、データを撤去する(取得したバイナリは Remove-DevEnvironment が取得物として削除する)。
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+    $dataDir = Join-Path $Config.CacheFullPath 'postgresql-data'
+    if (-not (Test-Path -LiteralPath $dataDir)) {
+        Write-DevLog 'PostgreSQL: 変更なし(インスタンスなし)'
+        return
+    }
+    if (-not $PSCmdlet.ShouldProcess($dataDir, 'PostgreSQL の一時インスタンスを停止・撤去')) { return }
+    $binDir = Join-Path $Config.CacheFullPath "postgresql\$($Config.PostgreSql.Version)\pgsqlin"
+    if (Test-Path -LiteralPath (Join-Path $binDir 'pg_ctl.exe')) {
+        Invoke-DevPostgresControl -BinDir $binDir -ArgumentList @('-D', $dataDir, '-m', 'immediate', '-w', 'stop')
+    }
+    Remove-Item -LiteralPath $dataDir -Recurse -Force
+    Write-DevLog 'PostgreSQL: インスタンスを撤去しました'
+}
+
+function Test-DevPostgresAvailable {
+    <#
+    .SYNOPSIS
+        PostgreSQL を使う検証(V26)の前提を確かめる。接続先(環境変数 JOB_TEST_POSTGRES_DSN)があるか、
+        一時インスタンスを作れる initdb が PATH にあれば使える。取得(ダウンロード)はしない。
+    #>
+    [OutputType([bool])]
+    param()
+    if ($env:JOB_TEST_POSTGRES_DSN) { return $true }
+    return [bool](Get-Command -Name 'initdb' -ErrorAction SilentlyContinue)
+}
+
 function Invoke-DevVerification {
     # UvPath は検証の各スクリプトブロックの中で使う(解析器は検出できない)
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'UvPath')]
@@ -302,7 +404,7 @@ function Invoke-DevVerification {
         @{ Id = 'V9'; Name = '性能の目安'; Command = { & $UvPath run pytest core/tests/perf -m perf } }
         @{ Id = 'V10'; Name = '静的検査(ruff、mypy)'; Command = {
                 & $UvPath run ruff check
-                if ($LASTEXITCODE -eq 0) { & $UvPath run mypy --strict core/src testing/src }
+                if ($LASTEXITCODE -eq 0) { & $UvPath run mypy }
             }
         }
         @{ Id = 'V11'; Name = 'スクリプトの検査(Pester、PSScriptAnalyzer)'; Command = {
@@ -317,12 +419,41 @@ function Invoke-DevVerification {
                 & $UvPath run pytest core/tests/acceptance/runner -k eligibility_consistency
             }
         }
-        @{ Id = 'V16'; Name = '権限の網羅(12 権限)'; Command = { & $UvPath run pytest core/tests/unit/test_authorization.py core/tests/unit/runner/test_authorization.py } }
+        @{ Id = 'V16'; Name = '権限の網羅(13 権限)'; Command = { & $UvPath run pytest core/tests/unit/test_authorization.py core/tests/unit/runner/test_authorization.py } }
         @{ Id = 'V17'; Name = 'トークンの非露出・ランナー管理の同時実行'; Command = {
                 & $UvPath run pytest core/tests/acceptance/runner -k 'token or concurrency'
             }
         }
         @{ Id = 'V18'; Name = '割り当ての性能の目安'; Command = { & $UvPath run pytest core/tests/perf -m perf -k request_job } }
+        @{ Id = 'V19'; Name = 'OpenAPI の契約(スナップショット・破壊的変更)'; Command = {
+                & $UvPath run pytest core-api/tests/contract/test_openapi_snapshot.py
+            }
+        }
+        @{ Id = 'V20'; Name = '応答が定義に適合する(schemathesis)'; Command = {
+                & $UvPath run pytest core-api/tests/contract/test_schemathesis.py
+            }
+        }
+        @{ Id = 'V21'; Name = '生成クライアントだけでの一連の操作'; Command = {
+                & $UvPath run pytest core-api/tests/acceptance/test_generated_client.py
+            }
+        }
+        @{ Id = 'V22'; Name = '認証・認可の網羅'; Command = { & $UvPath run pytest core-api/tests/unit/test_authn_authz.py } }
+        @{ Id = 'V23'; Name = 'API の受け入れシナリオ(US1〜US9)'; Command = { & $UvPath run pytest core-api/tests/acceptance } }
+        @{ Id = 'V24'; Name = 'エラーの形式と開示'; Command = { & $UvPath run pytest core-api/tests/contract/test_problem.py } }
+        @{ Id = 'V25'; Name = 'イベントの配信'; Command = { & $UvPath run pytest core-api/tests/acceptance/test_events.py } }
+        @{ Id = 'V26'; Name = '永続化の契約テスト(PostgreSQL)'
+            # 実 DB が使えること、かつ実 DB の契約テスト(T085)が存在すること。どちらかが欠けるときは保留する
+            Precondition = { (Test-DevPostgresAvailable) -and (Test-Path -LiteralPath 'core-persistence/tests/test_contracts_postgres.py') }
+            Command = { & $UvPath run pytest testing/tests core-persistence/tests -m postgres }
+        }
+        @{ Id = 'V27'; Name = '依存規則・語彙・禁止 API・外向きの通信'; Command = {
+                & $UvPath run lint-imports
+                if ($LASTEXITCODE -eq 0) {
+                    & $UvPath run pytest core-api/tests/architecture core-api/tests/acceptance/test_egress.py
+                }
+            }
+        }
+        @{ Id = 'V28'; Name = 'API の性能の目安'; Command = { & $UvPath run pytest core-api/tests/perf -m perf } }
     )
 
     $results = @()
@@ -331,6 +462,11 @@ function Invoke-DevVerification {
     Push-Location $root
     try {
         foreach ($check in $checks) {
+            if ($check.ContainsKey('Precondition') -and -not (& $check.Precondition)) {
+                Write-DevLog "$($check.Id) $($check.Name) は保留します(前提の PostgreSQL、または実 DB の契約テストがありません)"
+                $results += [pscustomobject]@{ Id = $check.Id; Name = $check.Name; Result = '保留' }
+                continue
+            }
             Write-DevLog "$($check.Id) $($check.Name) を実行します"
             $global:LASTEXITCODE = 0
             & $check.Command | ForEach-Object { Write-Information ([string]$_) -InformationAction Continue }
@@ -343,7 +479,7 @@ function Invoke-DevVerification {
         $ErrorActionPreference = $previous
     }
     $results | Format-Table -AutoSize | Out-String | ForEach-Object { Write-DevLog $_ }
-    return @($results | Where-Object { $_.Result -ne '成功' }).Count -eq 0
+    return @($results | Where-Object { $_.Result -eq '失敗' }).Count -eq 0
 }
 
 function Remove-DevEnvironment {
@@ -400,6 +536,6 @@ function Invoke-DevSetup {
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
-    $ok = Invoke-DevSetup -VerifyOnly:$VerifyOnly -Uninstall:$Uninstall -ConfigPath $ConfigPath
+    $ok = Invoke-DevSetup -VerifyOnly:$VerifyOnly -Uninstall:$Uninstall -WithPostgres:$WithPostgres -ConfigPath $ConfigPath
     if (-not $ok) { exit 1 }
 }

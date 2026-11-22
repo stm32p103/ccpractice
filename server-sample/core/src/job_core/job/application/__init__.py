@@ -43,6 +43,7 @@ from .ports import (
     AuditLog,
     CoreDependencies,
     JobRepository,
+    JobSearchCriteria,
     Outbox,
     OutboxEntry,
     OutboxStatus,
@@ -65,6 +66,7 @@ from .queries.job_views import (
     RelatedJobRef,
 )
 from .queries.list_jobs import ListJobs
+from .queries.search_jobs import JobSearchPage, SearchJobs
 
 __all__ = [
     "AbortAlreadyRequested",
@@ -96,6 +98,8 @@ __all__ = [
     "JobListView",
     "JobNotFound",
     "JobRepository",
+    "JobSearchCriteria",
+    "JobSearchPage",
     "JobState",
     "JobSummaryView",
     "ListJobs",
@@ -123,6 +127,7 @@ __all__ = [
     "RunnerBusy",
     "RunnerEligibility",
     "RunnerMismatch",
+    "SearchJobs",
     "SelfAnchor",
     "SubmitJob",
     "SubmitResult",

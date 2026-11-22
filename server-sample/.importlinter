@@ -1,6 +1,9 @@
 [importlinter]
 root_packages =
     job_core
+    job_core_api
+    job_core_persistence
+    job_core_server
 include_external_packages = True
 
 [importlinter:contract:core-first-party]
@@ -51,3 +54,31 @@ source_modules =
     job_core.job
 forbidden_modules =
     job_core.runner
+
+[importlinter:contract:api-independent-of-impl]
+name = job_core_api は永続化・組み立て・テスト部品を import しない
+type = forbidden
+source_modules =
+    job_core_api
+forbidden_modules =
+    job_core_persistence
+    job_core_server
+    job_testing
+
+[importlinter:contract:persistence-independent-of-server]
+name = job_core_persistence は job_core_server を import しない
+type = forbidden
+source_modules =
+    job_core_persistence
+forbidden_modules =
+    job_core_server
+
+[importlinter:contract:core-independent-of-api]
+name = job_core は API・永続化・組み立てを import しない
+type = forbidden
+source_modules =
+    job_core
+forbidden_modules =
+    job_core_api
+    job_core_persistence
+    job_core_server

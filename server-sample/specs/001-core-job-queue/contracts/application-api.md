@@ -35,9 +35,10 @@ HTTP の形(パス、状態コード)は 003 で定める。ここでは、ユ�
 | `RUNNER_MANAGE` | `runner.manage` | ランナーの作成・maintenance・異常の手動の解除・削除・トークン・許可リストの変更(002 で追加) |
 | `RUNNER_REPORT` | `runner.report` | ランナーの登録・生存通知・異常と回復の申告(002 で追加。ランナーのトークンにだけ付く) |
 | `RUNNER_SWEEP` | `runner.sweep` | ランナーの定期処理の実行(002 で追加。定期実行の主体用) |
+| `ACCESS_MANAGE` | `access.manage` | サービス用の認証情報の発行・失効・一覧、アクセス設定(対応表)の参照・再読み込み、利用者のセッションの一括の失効(003 で追加。人間のロールに載せられる) |
 
 `JOB_SUBMIT` 〜 `SUBMIT_ON_BEHALF` の 7 種は spec FR-023 の権限、`JOB_EXECUTE` と `RETENTION_PURGE` は plan で追加した権限(FR-023 の「少なくとも」の範囲。research.md R8)。
-`RUNNER_*` の 3 種は 002 の権限(002 research.md R10)。権限は合計 12 種で、001 の可否の判定は変わらない(追加の権限は 001 のユースケースの可否に影響しない)。
+`RUNNER_*` の 3 種は 002 の権限(002 research.md R10)。`ACCESS_MANAGE` は 003 の権限(003 research.md R6)。権限は合計 13 種で、001 の可否の判定は変わらない(追加の権限は 001 のユースケースの可否に影響しない)。
 可否は**権限だけ**で判定し、主体の種類(`Principal.kind`)は判定に使わない(憲章 原則 9)。
 
 ### 可否の表

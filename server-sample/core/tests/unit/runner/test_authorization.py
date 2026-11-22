@@ -1,6 +1,6 @@
 """runner の権限の判定の網羅テスト(spec SC-009、FR-025、FR-026。research.md R10)。
 
-12 権限の全部分集合(4096 通り)× ユースケースについて、contracts/application-api.md の必要な権限から独立に
+13 権限の全部分集合(8192 通り)× ユースケースについて、contracts/application-api.md の必要な権限から独立に
 書いた期待値と一致することを検査する。Principal.kind を変えても結果が変わらないこと(憲章 原則 9)も検査する。
 """
 
@@ -48,8 +48,8 @@ def allowed(operation: str, principal: Principal) -> bool:
 
 
 def test_subset_count() -> None:
-    assert len(P) == 12
-    assert len(ALL_SUBSETS) == 4096
+    assert len(P) == 13
+    assert len(ALL_SUBSETS) == 8192
 
 
 @pytest.mark.parametrize("operation", list(CALLS))

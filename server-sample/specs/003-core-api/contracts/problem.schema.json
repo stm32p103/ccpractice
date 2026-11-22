@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:job-api:schema:problem:v1",
+  "title": "Problem(エラーの応答。application/problem+json。RFC 9457)",
+  "type": "object",
+  "required": ["type", "title", "status", "code", "detail", "request_id"],
+  "additionalProperties": true,
+  "properties": {
+    "type": { "type": "string", "pattern": "^urn:job-api:error:[a-z0-9_]+$" },
+    "title": { "type": "string", "maxLength": 120 },
+    "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+    "code": {
+      "type": "string",
+      "enum": [
+        "request_invalid", "access_config_invalid", "return_to_invalid",
+        "authentication_failed", "permission_denied", "network_not_allowed", "origin_not_allowed",
+        "job_not_found", "runner_not_found", "credential_not_found",
+        "duplicate_queued_job", "target_not_queued", "anchor_not_queued", "invalid_state_transition",
+        "abort_already_requested", "runner_busy", "runner_has_unfinished_job", "duplicate_runner_name",
+        "duplicate_credential_name", "concurrency_conflict",
+        "payload_too_large",
+        "validation_failed", "no_eligible_runner", "self_anchor", "reason_required",
+        "invalid_declaration", "runner_not_registered",
+        "internal_error", "identity_provider_unavailable", "sse_capacity_exceeded",
+        "runner_mismatch", "runner_deleted", "already_in_maintenance", "not_in_maintenance",
+        "invalid_requirement", "lease_expired", "invalid_lease_transition", "not_found", "method_not_allowed"
+      ]
+    },
+    "detail": { "type": "string", "maxLength": 500 },
+    "request_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "required_permissions": { "type": "array", "items": { "type": "string" }, "maxItems": 13 },
+    "existing_job_id": { "type": "string" },
+    "anchor_job_id": { "type": "string" },
+    "job_id": { "type": "string" },
+    "from_state": { "type": "string" },
+    "operation": { "type": "string" },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "field": { "type": "string" },
+    "reason": { "type": "string" },
+    "runner_id": { "type": "string" },
+    "credential_id": { "type": "string" },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "reason"],
+        "additionalProperties": false,
+        "properties": { "key": { "type": "string" }, "reason": { "type": "string" } }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["location", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "location": { "type": "array", "items": { "type": ["string", "integer"] } },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$comment": "追加の項目は code ごとに固定(contracts/http-api.md §3.1)。認証情報・payload・ログ・異常の説明・能力の値・内部の例外の文字列を含めない(FR-014)。"
+}
