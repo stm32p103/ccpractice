@@ -59,6 +59,13 @@ class AuditOperation(StrEnum):
     SERVICE_CREDENTIAL_ISSUE = "service_credential_issue"
     SERVICE_CREDENTIAL_REVOKE = "service_credential_revoke"
     ACCESS_CONFIG_CHANGE = "access_config_change"
+    # --- 004 ランナーエージェント(004 data-model.md §3.3) ---
+    RUNNER_JOB_REPORT = "runner_job_report"
+    """ランナーからの結果の報告の受理。failure_reason・counters・成果物の件数だけを after に持つ。"""
+    LOG_READ = "log_read"
+    """ログの参照(誰が・いつ・どのジョブを。内容は記録しない)。"""
+    ARTIFACT_READ = "artifact_read"
+    """成果物の参照の一覧の取得(同上)。"""
 
 
 class AuditOutcome(StrEnum):

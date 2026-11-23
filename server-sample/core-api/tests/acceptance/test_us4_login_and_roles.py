@@ -196,4 +196,4 @@ def test_begin_login_is_404_for_direct_proof_only_providers() -> None:
 
 
 def test_default_access_template_is_what_the_tests_use() -> None:
-    assert set(DEFAULT_ACCESS["roles"]) == {"viewer", "member", "operator", "admin"}
+    assert set(DEFAULT_ACCESS["roles"]) == {"viewer", "member", "operator", "admin", "reader"}

@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/runner-protocol/1.1/runner-protocol.schema.json",
+  "title": "ランナープロトコル 1.1 のメッセージ(004 が追加するもの)",
+  "description": "003 の最小版に加える項目。すべて additionalProperties: false。ログ・結果の要約以外に自由な文字列を持たない。",
+  "$defs": {
+    "FailureReason": {
+      "enum": [
+        "tool_failed",
+        "timeout",
+        "input_rejected",
+        "executor_error",
+        "unsupported_job_type",
+        "repository_not_allowed",
+        "source_unavailable",
+        "artifact_limit_exceeded",
+        "artifact_store_failed",
+        "prepare_timeout",
+        "agent_shutdown",
+        "agent_restarted"
+      ]
+    },
+    "HeartbeatResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "lease_expires_at", "heartbeat_interval_seconds", "abort_requested"],
+      "properties": {
+        "state": { "type": "string" },
+        "lease_expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "heartbeat_interval_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "abort_requested": { "type": "boolean" }
+      }
+    },
+    "LogChunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "stream", "text"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 0 },
+        "stream": { "enum": ["stdout", "stderr"] },
+        "text": { "type": "string", "maxLength": 65536 }
+      }
+    },
+    "LogChunkResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stored_up_to_seq"],
+      "properties": {
+        "stored_up_to_seq": { "type": "integer", "minimum": -1 }
+      }
+    },
+    "SourceCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "secret", "expires_at"],
+      "properties": {
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" },
+        "secret": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ArtifactReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "reference", "size_bytes", "sha256"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^[^\\\\/:*?\"<>|\\u0000-\\u001f]+$" },
+        "kind": { "enum": ["unc", "url"] },
+        "reference": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "unc" } } },
+          "then": { "properties": { "reference": { "pattern": "^\\\\\\\\[^\\\\/:*?\"<>|]+\\\\[^\\\\/:*?\"<>|]+\\\\.+" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "url" } } },
+          "then": { "properties": { "reference": { "pattern": "^https://[^\\s]+$" } } }
+        }
+      ]
+    },
+    "Counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path_rejections", "masked_lines", "log_truncated"],
+      "properties": {
+        "path_rejections": { "type": "integer", "minimum": 0 },
+        "masked_lines": { "type": "integer", "minimum": 0 },
+        "log_truncated": { "type": "boolean" }
+      }
+    },
+    "FinishReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": { "enum": ["succeeded", "failed"] },
+        "result_summary": { "type": ["string", "null"], "maxLength": 200 },
+        "exit_code": { "type": ["integer", "null"] },
+        "failure_reason": { "anyOf": [{ "$ref": "#/$defs/FailureReason" }, { "type": "null" }] },
+        "artifacts": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/ArtifactReference" } },
+        "counters": { "$ref": "#/$defs/Counters" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "outcome": { "const": "succeeded" } } },
+          "then": { "properties": { "failure_reason": { "type": "null" } } }
+        }
+      ]
+    },
+    "LogPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunks", "next_seq", "complete"],
+      "properties": {
+        "chunks": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["seq", "stream", "text", "received_at"],
+            "properties": {
+              "seq": { "type": "integer", "minimum": 0 },
+              "stream": { "enum": ["stdout", "stderr"] },
+              "text": { "type": "string", "maxLength": 65536 },
+              "received_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "next_seq": { "type": "integer", "minimum": 0 },
+        "complete": { "type": "boolean" }
+      }
+    }
+  }
+}

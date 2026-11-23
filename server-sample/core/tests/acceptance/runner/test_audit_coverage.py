@@ -36,7 +36,8 @@ def test_every_successful_state_change_is_recorded_with_runner_id(env: RunnerEnv
     env.heartbeat(runner)  # RUNNER_ONLINE
     env.core.reissue_token(env.admin, runner_id=runner.runner_id)  # TOKEN_REVOKE、TOKEN_ISSUE
     env.core.revoke_token(env.admin, runner_id=runner.runner_id)
-    env.finish(runner, job)
+    # リース切れのジョブは、定期処理が失敗として確定済み(004 FR-024)。以後の報告は受け付けない
+    assert env.job(job).state.value == "failed"
     env.core.delete_runner(env.admin, runner_id=runner.runner_id)  # RUNNER_DELETE(トークンは失効済み)
 
     records = env.audit(runner_id=runner.runner_id)

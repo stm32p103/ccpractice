@@ -1,0 +1,29 @@
+# 開発用の設定(profile = "dev")。DirectLauncher・LocalDirectorySourceFetcher・HTTP の URL・環境変数の SecretSource を使う。
+# トークンは環境変数 JOB_RUNNER_TOKEN に置く。prod では使えない選択肢を含む。
+profile = "dev"
+poll_interval_seconds = 2
+
+[core]
+url = "http://127.0.0.1:8000"
+runner_token_secret = "JOB_RUNNER_TOKEN"
+
+[work]
+root = 'C:\temp\job-runner\work'
+min_free_bytes = 0
+
+[state]
+dir = 'C:\temp\job-runner\state'
+
+[env_allow]
+SystemRoot = 'C:\Windows'
+
+[tools.py]
+path = 'C:\Python312\python.exe'
+
+[source]
+repository_allowlist = ["sample-repo"]
+fetcher = "local_directory"
+local_directory_root = 'C:\temp\job-runner\sources'
+
+[launcher]
+kind = "direct"

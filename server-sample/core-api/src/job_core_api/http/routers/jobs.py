@@ -25,6 +25,7 @@ from ..schemas_jobs import (
     SubmitRequest,
     SubmitResultOut,
 )
+from ..schemas_runner_protocol import ArtifactListOut, ArtifactReferenceOut, LogPageOut
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -113,3 +114,22 @@ def retry_job(
     response.headers["Location"] = f"/v1/jobs/{result.job_id}"
     deps.publisher.job_retried(result.job_id)
     return SubmitResultOut.of(result)
+
+
+@router.get("/{job_id}/logs", response_model=LogPageOut, operation_id="get_job_logs")
+def get_job_logs(
+    job_id: str,
+    principal: CurrentPrincipal,
+    deps: Deps,
+    after_seq: Annotated[int, Query(ge=-1, description="この seq より後のチャンクを返す(-1 で先頭から)")] = -1,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> LogPageOut:
+    """ログの範囲の取得(004)。権限 `job.read_output`。閲覧は監査ログに残る(内容は記録しない)。"""
+    return LogPageOut.of(deps.core.read_log(principal, job_id=job_id, after_seq=after_seq, limit=limit))
+
+
+@router.get("/{job_id}/artifacts", response_model=ArtifactListOut, operation_id="get_job_artifacts")
+def get_job_artifacts(job_id: str, principal: CurrentPrincipal, deps: Deps) -> ArtifactListOut:
+    """成果物の参照の一覧(004。中身は返さない)。権限 `job.read_output`。"""
+    refs = deps.core.list_artifacts(principal, job_id=job_id)
+    return ArtifactListOut(artifacts=[ArtifactReferenceOut.of(ref) for ref in refs])

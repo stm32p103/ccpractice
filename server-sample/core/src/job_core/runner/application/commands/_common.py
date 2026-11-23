@@ -51,10 +51,12 @@ def live_lease_expiry(uow: RunnerUnitOfWork, runner_id: RunnerId, now: datetime)
 def heartbeat_result(
     uow: RunnerUnitOfWork, deps: RunnerDependencies, runner: Runner, now: datetime, *, lease_expires_at: datetime | None
 ) -> HeartbeatResult:
+    job = uow.jobs.find_unfinished_by_runner(runner.runner_id)
     return HeartbeatResult(
         state=runner.state_at(now, deps.timing),
         lease_expires_at=lease_expires_at,
         heartbeat_interval=deps.timing.heartbeat_interval,
+        abort_requested=job is not None and job.abort_pending,
     )
 
 

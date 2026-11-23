@@ -1,0 +1,16 @@
+[project]
+name = "job-runner-agent"
+version = "0.1.0"
+description = "ランナーエージェント本体。job_core* を import しない(用途固有の語を持たない)"
+requires-python = ">=3.12"
+dependencies = ["job-runner-protocol", "httpx>=0.27"]
+
+[tool.uv.sources]
+job-runner-protocol = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "job_runner_agent"

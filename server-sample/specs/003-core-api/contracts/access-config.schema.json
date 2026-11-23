@@ -20,7 +20,7 @@
             "items": {
               "enum": [
                 "job.submit", "job.general", "queue.schedule", "job.cancel_queued", "job.force_abort",
-                "audit.read_all", "job.submit_on_behalf", "runner.manage", "access.manage"
+                "audit.read_all", "job.submit_on_behalf", "runner.manage", "access.manage", "job.read_output"
               ]
             }
           }

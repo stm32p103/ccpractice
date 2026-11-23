@@ -113,6 +113,38 @@ class RunnerMismatch(JobCoreError):
         self.job_id = job_id
 
 
+class TargetNotRunning(JobCoreError):
+    """004: 実行中でないジョブへのログ・資格の操作(割り当て終了後など)。"""
+
+    code = "target_not_running"
+
+    def __init__(self, job_id: str, state: str | None = None) -> None:
+        super().__init__("対象のジョブが実行中でない", job_id=job_id, state=state)
+        self.job_id = job_id
+        self.state = state
+
+
+class LogSeqConflict(JobCoreError):
+    """004: 同じ seq で内容が異なるログのチャンク。"""
+
+    code = "log_seq_conflict"
+
+    def __init__(self, job_id: str, seq: int) -> None:
+        super().__init__("同じ seq で内容が異なる", job_id=job_id, seq=seq)
+        self.job_id = job_id
+        self.seq = seq
+
+
+class LogQuotaExceeded(JobCoreError):
+    """004: ジョブごとのログの総量の上限を超える追加。"""
+
+    code = "log_quota_exceeded"
+
+    def __init__(self, job_id: str) -> None:
+        super().__init__("ログの総量の上限を超える", job_id=job_id)
+        self.job_id = job_id
+
+
 class ConcurrencyConflict(JobCoreError):
     code = "concurrency_conflict"
 

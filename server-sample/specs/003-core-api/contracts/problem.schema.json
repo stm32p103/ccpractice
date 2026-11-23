@@ -23,12 +23,13 @@
         "invalid_declaration", "runner_not_registered",
         "internal_error", "identity_provider_unavailable", "sse_capacity_exceeded",
         "runner_mismatch", "runner_deleted", "already_in_maintenance", "not_in_maintenance",
-        "invalid_requirement", "lease_expired", "invalid_lease_transition", "not_found", "method_not_allowed"
+        "invalid_requirement", "lease_expired", "invalid_lease_transition", "not_found", "method_not_allowed",
+        "target_not_running", "log_seq_conflict", "log_quota_exceeded", "source_not_available"
       ]
     },
     "detail": { "type": "string", "maxLength": 500 },
     "request_id": { "type": "string", "minLength": 1, "maxLength": 64 },
-    "required_permissions": { "type": "array", "items": { "type": "string" }, "maxItems": 13 },
+    "required_permissions": { "type": "array", "items": { "type": "string" }, "maxItems": 14 },
     "existing_job_id": { "type": "string" },
     "anchor_job_id": { "type": "string" },
     "job_id": { "type": "string" },

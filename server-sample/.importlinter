@@ -4,6 +4,10 @@ root_packages =
     job_core_api
     job_core_persistence
     job_core_server
+    job_runner_protocol
+    job_runner_agent
+    job_profile_equipment_check
+    job_runner_service
 include_external_packages = True
 
 [importlinter:contract:core-first-party]
@@ -82,3 +86,58 @@ forbidden_modules =
     job_core_api
     job_core_persistence
     job_core_server
+
+[importlinter:contract:runner-protocol-standalone]
+name = job_runner_protocol は他の first-party パッケージを import しない
+type = forbidden
+source_modules =
+    job_runner_protocol
+forbidden_modules =
+    job_core
+    job_core_api
+    job_core_persistence
+    job_core_server
+    job_runner_agent
+    job_profile_equipment_check
+    job_runner_service
+    job_testing
+
+[importlinter:contract:runner-agent-independent]
+name = job_runner_agent は job_runner_protocol 以外の first-party を import しない(用途固有の部品・コア・組み立てに依存しない)
+type = forbidden
+source_modules =
+    job_runner_agent
+forbidden_modules =
+    job_core
+    job_core_api
+    job_core_persistence
+    job_core_server
+    job_profile_equipment_check
+    job_runner_service
+    job_testing
+
+[importlinter:contract:profile-uses-ports-only]
+name = job_profile_equipment_check はコア・組み立て・テスト部品を import しない
+type = forbidden
+source_modules =
+    job_profile_equipment_check
+forbidden_modules =
+    job_core
+    job_core_api
+    job_core_persistence
+    job_core_server
+    job_runner_service
+    job_testing
+
+[importlinter:contract:core-independent-of-runner-agent]
+name = job_core 系は runner-agent・プロファイル・組み立てを import しない
+type = forbidden
+source_modules =
+    job_core
+    job_core_api
+    job_core_persistence
+    job_core_server
+forbidden_modules =
+    job_runner_agent
+    job_profile_equipment_check
+    job_runner_service

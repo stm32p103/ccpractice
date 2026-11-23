@@ -15,6 +15,8 @@ from job_core.job.domain.errors import (
     DuplicateQueuedJob,
     InvalidStateTransition,
     JobNotFound,
+    LogQuotaExceeded,
+    LogSeqConflict,
     NoEligibleRunner,
     PermissionDenied,
     ReasonRequired,
@@ -22,6 +24,7 @@ from job_core.job.domain.errors import (
     RunnerMismatch,
     SelfAnchor,
     TargetNotQueued,
+    TargetNotRunning,
     ValidationFailed,
 )
 from job_core.job.domain.events import JobCompleted
@@ -30,6 +33,7 @@ from job_core.job.domain.states import JobState
 from job_core.job.domain.values import Placement, PlacementSide
 from job_core.shared.errors import JobCoreError
 
+from .commands.append_log import AppendLog
 from .commands.assign import AssignNextJob, AssignResult
 from .commands.cancel import CancelJob, CancelResult
 from .commands.confirm_stopped import ConfirmStopped
@@ -39,9 +43,11 @@ from .commands.reschedule import RescheduleJob, RescheduleResult
 from .commands.retry import RetryJob
 from .commands.submit import SubmitJob, SubmitResult
 from .ports import (
+    AppendResult,
     AuditFilter,
     AuditLog,
     CoreDependencies,
+    JobLogStore,
     JobRepository,
     JobSearchCriteria,
     Outbox,
@@ -66,11 +72,15 @@ from .queries.job_views import (
     RelatedJobRef,
 )
 from .queries.list_jobs import ListJobs
+from .queries.read_log import ListArtifacts, LogPageView, ReadLog
 from .queries.search_jobs import JobSearchPage, SearchJobs
+from .queries.source_access import ResolveSourceAccess, SourceTarget
 
 __all__ = [
     "AbortAlreadyRequested",
     "AnchorNotQueued",
+    "AppendLog",
+    "AppendResult",
     "AssignNextJob",
     "AssignResult",
     "AuditFilter",
@@ -96,13 +106,18 @@ __all__ = [
     "JobCoreError",
     "JobDetailView",
     "JobListView",
+    "JobLogStore",
     "JobNotFound",
     "JobRepository",
     "JobSearchCriteria",
     "JobSearchPage",
     "JobState",
     "JobSummaryView",
+    "ListArtifacts",
     "ListJobs",
+    "LogPageView",
+    "LogQuotaExceeded",
+    "LogSeqConflict",
     "NoEligibleRunner",
     "Outbox",
     "OutboxEntry",
@@ -117,11 +132,13 @@ __all__ = [
     "PurgeExpired",
     "PurgeResult",
     "QueueRepository",
+    "ReadLog",
     "ReasonRequired",
     "RelatedJobRef",
     "ReportFinished",
     "RescheduleJob",
     "RescheduleResult",
+    "ResolveSourceAccess",
     "RetentionPolicy",
     "RetryJob",
     "RunnerBusy",
@@ -129,9 +146,11 @@ __all__ = [
     "RunnerMismatch",
     "SearchJobs",
     "SelfAnchor",
+    "SourceTarget",
     "SubmitJob",
     "SubmitResult",
     "TargetNotQueued",
+    "TargetNotRunning",
     "UnitOfWork",
     "UnitOfWorkFactory",
     "ValidationFailed",

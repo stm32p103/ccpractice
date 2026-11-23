@@ -1,0 +1,45 @@
+# ランナーエージェントの設定の雛形(版 1。contracts/agent-config.schema.json)。秘密の値は書かない(資格情報の名前だけ)。
+# パスは TOML のリテラル文字列('...')で書く(バックスラッシュをそのまま書ける)。
+# 検証: python -m job_runner_service --config agent.toml --check
+profile = "prod"
+poll_interval_seconds = 5
+
+[core]
+url = "https://core.example.internal"
+runner_token_secret = "job-runner-token"      # 資格情報の保管機能の名前(値ではない)
+
+[capabilities]                                 # ランナーの能力(コア側の許可リストにあるキーだけ)
+k1 = "v"
+
+[work]
+root = 'D:\runner\work'
+min_free_bytes = 10737418240
+
+[state]
+dir = 'D:\runner\state'
+
+[env_allow]                                    # 外部ツールの環境変数(名前 = 固定の値。親の環境は引き継がない)
+SystemRoot = 'C:\Windows'
+
+[tools.check-tool]                             # 実行できるツール(tool_id = 実行ファイルの絶対パス。.bat・.cmd は不可)
+path = 'D:\tools\check-tool.exe'
+
+[executors.equipment-check]                    # ジョブ種別 = エグゼキュータの対応(名前はコード内の対応表)
+executor = "equipment-check"
+tool_ids = ["check-tool"]
+
+[source]
+repository_allowlist = []                      # 空なら、取得を要するジョブは実行しない(既定は拒否)
+fetcher = "remote"
+
+[artifact_store]                               # 既定は disabled(成果物を収集しない)
+kind = "disabled"
+# kind = "shared_folder"
+# [artifact_store.shared_folder]
+# local_path = 'D:\runner\results'             # ランナーごとの「実行結果」フォルダ。アクセス権の設定は本システムの範囲外
+# unc_host = "runner-pc-01"
+# share_name = "results"
+
+[launcher]
+kind = "logon"
+tool_account_secret = "job-runner-tool-account"   # 形式: ユーザー名:パスワード(資格情報の保管機能)

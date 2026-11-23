@@ -1,0 +1,25 @@
+<!-- WinSW の設定の雛形(Windows サービスとしての登録。登録・アカウントの作成は 009 のランナー用の構築スクリプトの項目)。
+     {{...}} は構築スクリプトが設定から埋める値。秘密(パスワードなど)は書かない。 -->
+<service>
+  <id>JobRunnerAgent</id>
+  <name>Job Runner Agent</name>
+  <description>ジョブを取得して外部ツールとして実行する、ランナーエージェント。</description>
+  <executable>{{python_exe}}</executable>
+  <arguments>-I -m job_runner_service --config {{config_path}}</arguments>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <serviceaccount>
+    <username>{{agent_account}}</username>
+    <allowservicelogon>false</allowservicelogon>
+  </serviceaccount>
+  <onfailure action="restart" delay="5 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>15 sec</stoptimeout>
+  <stopparentprocessfirst>true</stopparentprocessfirst>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+  <logpath>{{log_dir}}</logpath>
+</service>

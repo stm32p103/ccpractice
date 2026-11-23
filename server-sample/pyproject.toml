@@ -3,7 +3,7 @@ name = "job-platform-workspace"
 version = "0.1.0"
 description = "汎用ジョブ実行基盤のワークスペース(配布しない)"
 requires-python = ">=3.12"
-dependencies = ["job-core", "job-core-api", "job-core-persistence", "job-core-server", "job-testing"]
+dependencies = ["job-core", "job-core-api", "job-core-persistence", "job-core-server", "job-runner-protocol", "job-runner-agent", "job-profile-equipment-check", "job-runner-service", "job-testing"]
 
 [dependency-groups]
 dev = [
@@ -23,7 +23,7 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["core", "core-api", "core-persistence", "core-server", "testing"]
+members = ["core", "core-api", "core-persistence", "core-server", "runner-protocol", "runner-agent", "profile-equipment-check", "runner-service", "testing"]
 
 [tool.uv.sources]
 job-core = { workspace = true }
@@ -31,11 +31,15 @@ job-testing = { workspace = true }
 job-core-api = { workspace = true }
 job-core-persistence = { workspace = true }
 job-core-server = { workspace = true }
+job-runner-protocol = { workspace = true }
+job-runner-agent = { workspace = true }
+job-profile-equipment-check = { workspace = true }
+job-runner-service = { workspace = true }
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-src = ["core/src", "core-api/src", "core-persistence/src", "core-server/src", "testing/src"]
+src = ["core/src", "core-api/src", "core-persistence/src", "core-server/src", "runner-protocol/src", "runner-agent/src", "profile-equipment-check/src", "runner-service/src", "testing/src"]
 # Spec Kit などの道具のファイルは対象外(この feature の成果物ではない)
 extend-exclude = [".specify", ".claude", "draft", "inputs", "specs"]
 
@@ -46,13 +50,15 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-mypy_path = ["core/src", "core-api/src", "core-persistence/src", "core-server/src", "testing/src"]
-packages = ["job_core", "job_core_api", "job_core_persistence", "job_core_server", "job_testing"]
+mypy_path = ["core/src", "core-api/src", "core-persistence/src", "core-server/src", "runner-protocol/src", "runner-agent/src", "profile-equipment-check/src", "runner-service/src", "testing/src"]
+packages = ["job_core", "job_core_api", "job_core_persistence", "job_core_server", "job_runner_protocol", "job_runner_agent", "job_profile_equipment_check", "job_runner_service", "job_testing"]
 
 [tool.pytest.ini_options]
-testpaths = ["core/tests", "core-api/tests", "core-persistence/tests", "core-server/tests", "testing/tests"]
-addopts = "-m 'not perf and not postgres' --import-mode=importlib"
+testpaths = ["core/tests", "core-api/tests", "core-persistence/tests", "core-server/tests", "runner-protocol/tests", "runner-agent/tests", "profile-equipment-check/tests", "runner-service/tests", "testing/tests"]
+addopts = "-m 'not perf and not postgres and not windows and not twoaccount' --import-mode=importlib"
 markers = [
     "perf: 性能の目安のテスト(既定では実行しない。-m perf で実行)",
     "postgres: 実 PostgreSQL が要るテスト(既定では実行しない。-m postgres で実行)",
+    "windows: Windows の OS 機能(Job Object・リパースポイントなど)が要るテスト(既定では実行しない。-m windows で実行)",
+    "twoaccount: 2 アカウントを構築した PC のみで実行するテスト(既定では実行しない。-m twoaccount で実行)",
 ]

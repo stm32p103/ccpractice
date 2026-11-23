@@ -30,6 +30,8 @@ class HeartbeatResult:
     state: RunnerState
     lease_expires_at: datetime | None
     heartbeat_interval: timedelta
+    abort_requested: bool = False
+    """004: このランナーに割り当て中のジョブに、中断の要求がある(強制中断の指示。真偽だけ)。"""
 
 
 class NotAssignedKind(StrEnum):

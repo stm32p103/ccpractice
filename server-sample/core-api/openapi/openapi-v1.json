@@ -72,6 +72,106 @@
         "title": "AllowlistOut",
         "type": "object"
       },
+      "ArtifactListOut": {
+        "additionalProperties": false,
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactReferenceOut"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "artifacts"
+        ],
+        "title": "ArtifactListOut",
+        "type": "object"
+      },
+      "ArtifactReferenceIn": {
+        "additionalProperties": false,
+        "description": "成果物の参照(004)。中身を持たない。UNC パスまたは HTTPS の URL。",
+        "properties": {
+          "kind": {
+            "enum": [
+              "unc",
+              "url"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "reference": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "reference",
+          "size_bytes",
+          "sha256"
+        ],
+        "title": "ArtifactReferenceIn",
+        "type": "object"
+      },
+      "ArtifactReferenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "unc",
+              "url"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "reference",
+          "size_bytes",
+          "sha256"
+        ],
+        "title": "ArtifactReferenceOut",
+        "type": "object"
+      },
       "AssignmentOut": {
         "additionalProperties": false,
         "properties": {
@@ -166,7 +266,10 @@
           "auth_failed",
           "service_credential_issue",
           "service_credential_revoke",
-          "access_config_change"
+          "access_config_change",
+          "runner_job_report",
+          "log_read",
+          "artifact_read"
         ],
         "title": "AuditOperation",
         "type": "string"
@@ -399,6 +502,32 @@
         "title": "CancellationOut",
         "type": "object"
       },
+      "CountersIn": {
+        "additionalProperties": false,
+        "properties": {
+          "log_truncated": {
+            "title": "Log Truncated",
+            "type": "boolean"
+          },
+          "masked_lines": {
+            "minimum": 0.0,
+            "title": "Masked Lines",
+            "type": "integer"
+          },
+          "path_rejections": {
+            "minimum": 0.0,
+            "title": "Path Rejections",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path_rejections",
+          "masked_lines",
+          "log_truncated"
+        ],
+        "title": "CountersIn",
+        "type": "object"
+      },
       "CreateRunnerRequest": {
         "additionalProperties": false,
         "properties": {
@@ -555,6 +684,46 @@
       "FinishRequest": {
         "additionalProperties": false,
         "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactReferenceIn"
+            },
+            "maxItems": 100,
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "counters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CountersIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
           "outcome": {
             "enum": [
               "succeeded",
@@ -566,6 +735,7 @@
           "result_summary": {
             "anyOf": [
               {
+                "maxLength": 200,
                 "type": "string"
               },
               {
@@ -620,6 +790,11 @@
       "HeartbeatResultOut": {
         "additionalProperties": false,
         "properties": {
+          "abort_requested": {
+            "default": false,
+            "title": "Abort Requested",
+            "type": "boolean"
+          },
           "heartbeat_interval_seconds": {
             "title": "Heartbeat Interval Seconds",
             "type": "number"
@@ -964,6 +1139,111 @@
           "retry_of"
         ],
         "title": "JobSummary",
+        "type": "object"
+      },
+      "LogChunkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "seq": {
+            "minimum": 0.0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "stream": {
+            "enum": [
+              "stdout",
+              "stderr"
+            ],
+            "title": "Stream",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 65536,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "stream",
+          "text"
+        ],
+        "title": "LogChunkIn",
+        "type": "object"
+      },
+      "LogChunkOut": {
+        "additionalProperties": false,
+        "properties": {
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "stream": {
+            "enum": [
+              "stdout",
+              "stderr"
+            ],
+            "title": "Stream",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "stream",
+          "text",
+          "received_at"
+        ],
+        "title": "LogChunkOut",
+        "type": "object"
+      },
+      "LogChunkResultOut": {
+        "additionalProperties": false,
+        "properties": {
+          "stored_up_to_seq": {
+            "title": "Stored Up To Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stored_up_to_seq"
+        ],
+        "title": "LogChunkResultOut",
+        "type": "object"
+      },
+      "LogPageOut": {
+        "additionalProperties": false,
+        "properties": {
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/LogChunkOut"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "next_seq": {
+            "title": "Next Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chunks",
+          "next_seq",
+          "complete"
+        ],
+        "title": "LogPageOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -1714,6 +1994,31 @@
           "idle_expires_at"
         ],
         "title": "SessionInfo",
+        "type": "object"
+      },
+      "SourceCredentialOut": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "secret": {
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "secret",
+          "expires_at"
+        ],
+        "title": "SourceCredentialOut",
         "type": "object"
       },
       "SubmitRequest": {
@@ -3915,6 +4220,137 @@
         ]
       }
     },
+    "/v1/jobs/{job_id}/artifacts": {
+      "get": {
+        "description": "成果物の参照の一覧(004。中身は返さない)。権限 `job.read_output`。",
+        "operationId": "get_job_artifacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "要求の形式が不正"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証に失敗"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "権限がない・接続元または Origin が許可されていない"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "対象が存在しない"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "現在の状態では実行できない・重複・同時の更新との衝突"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "本文が大きすぎる"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "入力が規則を満たさない"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "内部のエラー"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証基盤が使えない・購読の上限"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get Job Artifacts",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/v1/jobs/{job_id}/cancel": {
       "post": {
         "description": "取り消し(待機中)または強制中断の要求(実行中。理由が必須)。",
@@ -4186,6 +4622,162 @@
           }
         ],
         "summary": "Get Job History",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/logs": {
+      "get": {
+        "description": "ログの範囲の取得(004)。権限 `job.read_output`。閲覧は監査ログに残る(内容は記録しない)。",
+        "operationId": "get_job_logs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "この seq より後のチャンクを返す(-1 で先頭から)",
+            "in": "query",
+            "name": "after_seq",
+            "required": false,
+            "schema": {
+              "default": -1,
+              "description": "この seq より後のチャンクを返す(-1 で先頭から)",
+              "minimum": -1,
+              "title": "After Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "要求の形式が不正"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証に失敗"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "権限がない・接続元または Origin が許可されていない"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "対象が存在しない"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "現在の状態では実行できない・重複・同時の更新との衝突"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "本文が大きすぎる"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "入力が規則を満たさない"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "内部のエラー"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証基盤が使えない・購読の上限"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get Job Logs",
         "tags": [
           "jobs"
         ]
@@ -5081,6 +5673,147 @@
         ]
       }
     },
+    "/v1/runner/jobs/{job_id}/logs": {
+      "post": {
+        "description": "ログのチャンクの追加(004)。同じ `seq` の再送は冪等。割り当て先のランナーだけ。",
+        "operationId": "runner_append_log",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogChunkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogChunkResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "要求の形式が不正"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証に失敗"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "権限がない・接続元または Origin が許可されていない"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "対象が存在しない"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "現在の状態では実行できない・重複・同時の更新との衝突"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "本文が大きすぎる"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "入力が規則を満たさない"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "内部のエラー"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証基盤が使えない・購読の上限"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Append Log",
+        "tags": [
+          "runner"
+        ]
+      }
+    },
     "/v1/runner/jobs/{job_id}/result": {
       "post": {
         "description": "終了の報告。",
@@ -5217,6 +5950,137 @@
           }
         ],
         "summary": "Report Finished",
+        "tags": [
+          "runner"
+        ]
+      }
+    },
+    "/v1/runner/jobs/{job_id}/source-credential": {
+      "post": {
+        "description": "ジョブのソースの取得資格(短命・読み取り専用)の要求(004)。割り当て中のジョブのランナーだけ。値を保存・記録しない。",
+        "operationId": "runner_source_credential",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCredentialOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "要求の形式が不正"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証に失敗"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "権限がない・接続元または Origin が許可されていない"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "対象が存在しない"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "現在の状態では実行できない・重複・同時の更新との衝突"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "本文が大きすぎる"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "入力が規則を満たさない"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "内部のエラー"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            },
+            "description": "認証基盤が使えない・購読の上限"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Source Credential",
         "tags": [
           "runner"
         ]

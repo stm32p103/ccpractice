@@ -212,6 +212,48 @@ def t_already_in_maintenance() -> httpx.Response:
     return api.client.put(f"/v1/runners/{runner_id}/maintenance", json={}, headers=H(admin))
 
 
+def running_job(api: ApiFixture) -> tuple[str, str, str]:
+    runner_id, token = api.register_runner("r-a")
+    job_id = new_job(api, api.member("alice"))
+    assert api.assign_next(runner_id, token) == job_id
+    return job_id, runner_id, token
+
+
+def t_target_not_running() -> httpx.Response:
+    api = build_api()
+    job_id, _, token = running_job(api)
+    api.client.post(f"/v1/runner/jobs/{job_id}/result", json={"outcome": "succeeded"}, headers=H(token))
+    return api.client.post(
+        f"/v1/runner/jobs/{job_id}/logs", json={"seq": 0, "stream": "stdout", "text": "x"}, headers=H(token)
+    )
+
+
+def t_log_seq_conflict() -> httpx.Response:
+    api = build_api()
+    job_id, _, token = running_job(api)
+    first = {"seq": 0, "stream": "stdout", "text": "a"}
+    api.client.post(f"/v1/runner/jobs/{job_id}/logs", json=first, headers=H(token))
+    return api.client.post(f"/v1/runner/jobs/{job_id}/logs", json={**first, "text": "b"}, headers=H(token))
+
+
+def t_log_quota_exceeded() -> httpx.Response:
+    api = build_api()
+    object.__setattr__(api.core.deps, "log_quota_chars", 3)
+    job_id, _, token = running_job(api)
+    return api.client.post(
+        f"/v1/runner/jobs/{job_id}/logs", json={"seq": 0, "stream": "stdout", "text": "abcd"}, headers=H(token)
+    )
+
+
+def t_source_not_available() -> httpx.Response:
+    api = build_api(with_source_issuer=False)
+    runner_id, token = api.register_runner("r-a")
+    body = submit_body(definition_source="repo-1")
+    job_id = api.client.post("/v1/jobs", json=body, headers=H(api.member("alice"))).json()["job_id"]
+    assert api.assign_next(runner_id, token) == job_id
+    return api.client.post(f"/v1/runner/jobs/{job_id}/source-credential", headers=H(token))
+
+
 def t_internal_error() -> httpx.Response:
     api = build_api()
     router = APIRouter()

@@ -11,7 +11,6 @@ from job_core.job.domain.audit import AuditOperation
 from job_core.runner.application import (
     Heartbeat,
     LeaseStatus,
-    NotAssignedKind,
     RunnerNotFound,
     RunnerNotRegistered,
     RunnerState,
@@ -115,13 +114,16 @@ def test_us4_4_lease_expires_without_extension_and_is_not_revived(env: RunnerEnv
         assert uow.leases.find_active_by_job(job_id) is None  # type: ignore[arg-type]
     # 以後、そのリースの延長は受け付けない
     assert env.heartbeat(runner).lease_expires_at is None
-    # ジョブは実行中のまま残り(扱いは 004)、ランナーには新しい割り当てが行われない
-    assert env.job(job_id).state.value == "running"
+    # 004 FR-024: リース切れのジョブは、待機列へ戻さず、失敗として確定する(再実行しない)。ランナーは空く
+    job = env.job(job_id)
+    assert job.state.value == "failed"
+    assert job.result_detail is not None and job.result_detail.failure_reason == "lease_expired"
+    with pytest.raises(Exception, match="failed から finish"):
+        env.finish(runner, job_id)  # 確定後の報告は拒否される
+    assert env.queue_ids() == []  # 待機列へ戻っていない
     env.submit()
     again = env.request(runner)
-    assert again.not_assigned_reason is not None
-    assert again.not_assigned_reason.kind is NotAssignedKind.RUNNER_BUSY
-    assert assignment.lease_id
+    assert again.assignment is not None and again.assignment.lease_id != assignment.lease_id
 
 
 def test_us4_5_maintenance_runner_updates_last_seen_but_stays_maintenance(env: RunnerEnv) -> None:

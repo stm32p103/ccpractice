@@ -1,0 +1,16 @@
+[project]
+name = "job-profile-equipment-check"
+version = "0.1.0"
+description = "最初の用途(equipment-check)のエグゼキュータ。job_runner_agent のポートだけを使う"
+requires-python = ">=3.12"
+dependencies = ["job-runner-agent"]
+
+[tool.uv.sources]
+job-runner-agent = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "job_profile_equipment_check"

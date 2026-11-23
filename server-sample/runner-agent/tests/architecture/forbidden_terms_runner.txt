@@ -1,0 +1,5 @@
+# runner-agent・runner-protocol に含めてはならない語(004 SC-008、憲章 原則 1・3)。
+# core の forbidden_terms.txt(用途固有の語・プラットフォームの語)に加えて、プロファイルの名前を禁止する。
+# 1 行に 1 語。大文字・小文字を区別しない。# から始まる行は注釈。
+equipment-check
+equipment_check

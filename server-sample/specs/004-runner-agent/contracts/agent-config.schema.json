@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/runner-agent/1/agent-config.schema.json",
+  "title": "ランナーエージェントの設定(agent.toml を JSON で表したもの。版 1)",
+  "description": "秘密の値は含めない(資格情報の名前だけ)。profile が dev でなければ、dev 用の選択肢は起動時に拒否される。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile", "core", "work", "state", "source", "launcher"],
+  "properties": {
+    "profile": { "enum": ["prod", "dev"], "default": "prod" },
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "runner_token_secret"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "runner_token_secret": { "type": "string", "minLength": 1, "description": "資格情報の保管機能の名前。値ではない" },
+        "ca_bundle": { "type": "string", "description": "組織の CA の証明書ファイル(任意)" }
+      }
+    },
+    "poll_interval_seconds": { "type": "number", "minimum": 1, "maximum": 60, "default": 5 },
+    "capabilities": { "type": "object", "description": "002 の capability-declaration.schema.json に従う" },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root"],
+      "properties": {
+        "root": { "type": "string", "description": "絶対パス" },
+        "min_free_bytes": { "type": "integer", "minimum": 0, "default": 10737418240 }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dir"],
+      "properties": {
+        "dir": { "type": "string" },
+        "spool_max_bytes": { "type": "integer", "minimum": 0, "default": 67108864 },
+        "audit_retention_days": { "type": "integer", "minimum": 1, "default": 90 }
+      }
+    },
+    "env_allow": {
+      "type": "object",
+      "description": "外部ツールの環境変数。名前 → 固定の値。親の環境の値は読まない",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$" },
+      "additionalProperties": { "type": "string", "maxLength": 1024 }
+    },
+    "tools": {
+      "type": "object",
+      "description": "tool_id → 実行ファイルの絶対パス(.bat・.cmd は不可)",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_-]{0,63}$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^[A-Za-z]:\\\\.+(?<!\\.bat)(?<!\\.cmd)$" },
+          "memory_limit_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "executors": {
+      "type": "object",
+      "description": "job_type → エグゼキュータの対応。executor はコード内の対応表の名前",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["executor", "tool_ids"],
+        "properties": {
+          "executor": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$" },
+          "tool_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "env_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [] },
+          "options": { "type": "object" }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_allowlist", "fetcher"],
+      "properties": {
+        "repository_allowlist": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "fetcher": { "enum": ["local_directory", "remote"], "description": "local_directory は dev のみ。remote の実アダプタは 005" },
+        "local_directory_root": { "type": "string" }
+      }
+    },
+    "artifact_store": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["disabled", "shared_folder", "https_storage"], "default": "disabled" },
+        "shared_folder": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["local_path", "unc_host", "share_name"],
+          "properties": {
+            "local_path": { "type": "string", "description": "ランナーごとに指定する「実行結果」フォルダ(絶対パス)。アクセス権の設定は範囲外" },
+            "unc_host": { "type": "string" },
+            "share_name": { "type": "string" }
+          }
+        },
+        "https_storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["base_url", "credential_secret"],
+          "properties": {
+            "base_url": { "type": "string", "pattern": "^https://" },
+            "credential_secret": { "type": "string" }
+          }
+        },
+        "max_files": { "type": "integer", "minimum": 1, "default": 100 },
+        "max_file_bytes": { "type": "integer", "minimum": 1, "default": 2147483648 },
+        "max_total_bytes": { "type": "integer", "minimum": 1, "default": 4294967296 },
+        "retention_days": { "type": "integer", "minimum": 1, "default": 30 },
+        "store_quota_bytes": { "type": "integer", "minimum": 1, "default": 214748364800 }
+      }
+    },
+    "logs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes_per_job": { "type": "integer", "minimum": 1, "default": 10485760 },
+        "max_bytes_per_second": { "type": "integer", "minimum": 1, "default": 1048576 },
+        "flush_interval_ms": { "type": "integer", "minimum": 100, "default": 1000 },
+        "mask_patterns": { "type": "array", "items": { "type": "string" }, "description": "既定のパターンに加える正規表現" }
+      }
+    },
+    "launcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["logon", "direct"], "description": "direct は dev のみ" },
+        "tool_account_secret": { "type": "string", "description": "ツールのアカウントの資格の名前(logon のとき必須)" }
+      }
+    },
+    "timeouts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prepare_timeout_seconds": { "type": "integer", "minimum": 10, "default": 600 },
+        "stop_wait_seconds": { "type": "integer", "minimum": 1, "maximum": 30, "default": 5 }
+      }
+    },
+    "firewall_self_check": { "type": "boolean", "default": true }
+  }
+}

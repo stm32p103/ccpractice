@@ -28,4 +28,4 @@ def test_decision_does_not_depend_on_kind(kind: PrincipalKind) -> None:
 
 def test_access_manage_is_a_permission() -> None:
     assert P("access.manage") is P.ACCESS_MANAGE
-    assert len(P) == 13
+    assert len(P) == 14

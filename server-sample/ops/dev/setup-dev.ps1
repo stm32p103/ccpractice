@@ -419,7 +419,7 @@ function Invoke-DevVerification {
                 & $UvPath run pytest core/tests/acceptance/runner -k eligibility_consistency
             }
         }
-        @{ Id = 'V16'; Name = '権限の網羅(13 権限)'; Command = { & $UvPath run pytest core/tests/unit/test_authorization.py core/tests/unit/runner/test_authorization.py } }
+        @{ Id = 'V16'; Name = '権限の網羅(14 権限)'; Command = { & $UvPath run pytest core/tests/unit/test_authorization.py core/tests/unit/runner/test_authorization.py } }
         @{ Id = 'V17'; Name = 'トークンの非露出・ランナー管理の同時実行'; Command = {
                 & $UvPath run pytest core/tests/acceptance/runner -k 'token or concurrency'
             }
@@ -454,6 +454,33 @@ function Invoke-DevVerification {
             }
         }
         @{ Id = 'V28'; Name = 'API の性能の目安'; Command = { & $UvPath run pytest core-api/tests/perf -m perf } }
+        # --- 004 ランナーエージェント(specs/004-runner-agent/quickstart.md の V1〜V26 のうち自動化できるもの) ---
+        @{ Id = 'V29'; Name = '004 ランナープロトコルの共有スキーマ・設定・組み立て'; Command = {
+                & $UvPath run pytest runner-protocol runner-service
+            }
+        }
+        @{ Id = 'V30'; Name = '004 偽のコアでの一巡・ログ・成果物(US1・US2。機密の検査・パスの逸脱・台帳にない送信 0 件)'; Command = {
+                & $UvPath run pytest runner-agent/tests/acceptance/test_us1_run_and_report.py runner-agent/tests/acceptance/test_us1_logs.py runner-agent/tests/acceptance/test_us2_no_exfiltration.py -m 'windows or not windows'
+            }
+        }
+        @{ Id = 'V31'; Name = '004 中断・タイムアウト・途絶と復帰・許可リスト(US3・US4・US6)'; Command = {
+                & $UvPath run pytest runner-agent/tests/acceptance/test_us3_abort_and_timeout.py runner-agent/tests/acceptance/test_us4_outage_and_recovery.py runner-agent/tests/acceptance/test_us6_allowlist_and_source.py
+            }
+        }
+        @{ Id = 'V32'; Name = '004 エグゼキュータの契約・追加の容易さ・異常の申告(US5)'; Command = {
+                & $UvPath run pytest profile-equipment-check runner-agent/tests/acceptance/test_us5_fault_signal.py testing/tests/test_executor_fake.py
+            }
+        }
+        @{ Id = 'V33'; Name = '004 ポートの契約(ランナープロトコル・取得・保存先)と単体(パス・環境・マスク)'; Command = {
+                & $UvPath run pytest runner-agent/tests/contract runner-agent/tests/unit testing/tests/test_runner_protocol_fake.py core-api/tests/contract/test_runner_protocol_contract.py
+            }
+        }
+        @{ Id = 'V34'; Name = '004 依存規則・語彙・禁止 API(用途固有の語・通信・プロセス起動の場所)・OS の機能(Job Object)'; Command = {
+                & $UvPath run lint-imports
+                if ($LASTEXITCODE -eq 0) { & $UvPath run pytest runner-agent/tests/architecture }
+                if ($LASTEXITCODE -eq 0) { & $UvPath run pytest runner-agent/tests/windows -m windows }
+            }
+        }
     )
 
     $results = @()

@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from fastapi import FastAPI
 
-from job_core.job.application.ports import UnitOfWorkFactory
+from job_core.job.application.ports import JobLogStore, UnitOfWorkFactory
 from job_core.runner.application import RunnerDependencies, RunnerEligibilityService, RunnerTimingPolicy
 from job_core.runner.application.ports import RunnerCatalog
 from job_core.shared.secret_generator import SystemSecretGenerator
@@ -61,15 +61,17 @@ def build_app(settings: ServerSettings, secrets: SecretSource | None = None) -> 
             InMemoryServiceCredentialRepository,
             InMemorySessionRepository,
         )
-        from job_testing.core_fakes import InMemoryRunnerCatalog, InMemoryStore
+        from job_testing.core_fakes import InMemoryJobLogStore, InMemoryRunnerCatalog, InMemoryStore
 
         store = InMemoryStore()
+        outputs: JobLogStore = InMemoryJobLogStore()
         catalog: RunnerCatalog = InMemoryRunnerCatalog(store.runner_state, store.lock)
         uow_factory: UnitOfWorkFactory = store.new_unit_of_work
         sessions: SessionRepository = InMemorySessionRepository()
         credentials: ServiceCredentialRepository = InMemoryServiceCredentialRepository()
     else:
         from job_core_persistence import (
+            SqlJobLogStore,
             SqlRunnerCatalog,
             SqlServiceCredentialRepository,
             SqlSessionRepository,
@@ -86,6 +88,7 @@ def build_app(settings: ServerSettings, secrets: SecretSource | None = None) -> 
         migrate(dsn)  # 開発では、起動時に最新へ適用する(本番は 009 の migrate.ps1)
         engine = make_engine(dsn)
         catalog = SqlRunnerCatalog(engine)
+        outputs = SqlJobLogStore(engine)
         uow_factory = sql_uow_factory(engine)
         sessions = SqlSessionRepository(engine)
         credentials = SqlServiceCredentialRepository(engine)
@@ -96,6 +99,7 @@ def build_app(settings: ServerSettings, secrets: SecretSource | None = None) -> 
         clock=clock,
         ids=ids,
         max_conflict_retries=3,
+        outputs=outputs,
         catalog=catalog,
         secrets=SystemSecretGenerator(),
         timing=RunnerTimingPolicy(),

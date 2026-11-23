@@ -11,8 +11,11 @@ from __future__ import annotations
 from functools import partial
 
 from job_core.access.principal import Principal
+from job_core.job.application.audit_support import make_record
 from job_core.job.domain.audit import AuditOperation
 from job_core.job.domain.errors import ConcurrencyConflict
+from job_core.job.domain.output import ResultDetail
+from job_core.job.domain.states import JobState
 from job_core.runner.domain.runner import Connectivity
 from job_core.shared.ids import JobId, RunnerId
 
@@ -86,6 +89,27 @@ class SweepRunners:
         before = {"expires_at": lease.expires_at.isoformat()}
         lease.expire(now)
         uow.leases.save(lease)
+        # 004 FR-024: リース切れのジョブは、待機列へ戻さず、失敗として確定する(自動で再実行しない)
+        job.finish(
+            runner_id=lease.runner_id,
+            outcome=JobState.FAILED,
+            summary=None,
+            at=now,
+            event_id=deps.ids.new_id(),
+            detail=ResultDetail(failure_reason="lease_expired"),
+        )
+        uow.jobs.save(job)
+        uow.audit.append(
+            make_record(
+                deps,
+                principal,
+                AuditOperation.COMPLETE,
+                job.job_id,
+                before={"state": JobState.RUNNING.value},
+                after={"state": job.state.value, "failure_reason": "lease_expired"},
+                runner_id=lease.runner_id,
+            )
+        )
         uow.audit.append(
             make_runner_record(
                 deps,

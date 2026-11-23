@@ -197,10 +197,10 @@ Describe 'Remove-DevEnvironment' {
 }
 
 Describe 'Invoke-DevVerification の検証の一覧' {
-    It 'V1 から V28 までを、この順に定義している' {
+    It 'V1 から V34 までを、この順に定義している' {
         $text = Get-Content -LiteralPath $script:SetupScript -Raw
         $ids = [regex]::Matches($text, "Id = 'V(\d+)'") | ForEach-Object { [int]$_.Groups[1].Value }
-        $ids | Should -Be (1..28)
+        $ids | Should -Be (1..34)
     }
 
     It 'PostgreSQL を使う V26 だけが、前提(Precondition)を持つ' {

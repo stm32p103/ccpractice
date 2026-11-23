@@ -5,14 +5,14 @@ default_roles = ["viewer"]
 permissions = ["job.general"]
 
 [roles.member]
-permissions = ["job.general", "job.submit"]
+permissions = ["job.general", "job.submit", "job.read_output"]
 
 [roles.operator]
-permissions = ["job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort"]
+permissions = ["job.general", "job.submit", "job.read_output", "queue.schedule", "job.cancel_queued", "job.force_abort"]
 
 [roles.admin]
 permissions = [
-  "job.general", "job.submit", "queue.schedule", "job.cancel_queued", "job.force_abort",
+  "job.general", "job.submit", "job.read_output", "queue.schedule", "job.cancel_queued", "job.force_abort",
   "audit.read_all", "runner.manage", "access.manage",
 ]
 

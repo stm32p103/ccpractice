@@ -46,7 +46,10 @@ EXPECTED: dict[str, set[Op]] = {
     "login": {Op.LOGIN},
 }
 # 監査の対象外(理由つき)。状態を変える POST・PUT・DELETE は、原則として対象。
-EXCLUDED: dict[str, str] = {}
+EXCLUDED: dict[str, str] = {
+    "runner_append_log": "ログの追加は量が多いため、成功は監査に残さない(拒否は残る)。参照は LOG_READ で残る。004",
+    "runner_source_credential": "取得資格の発行は、資格の値と同様、監査に載せない設計(拒否は残る)。004",
+}
 
 
 def state_changing_operations() -> set[str]:

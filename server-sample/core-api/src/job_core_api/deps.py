@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from job_core.access.permission import Permission
 from job_core.access.principal import Principal, PrincipalKind
 from job_core.job.application import (
+    AppendLog,
     AssignNextJob,
     CancelJob,
     ConfirmStopped,
@@ -18,10 +19,13 @@ from job_core.job.application import (
     GetAuditLog,
     GetJob,
     GetJobHistory,
+    ListArtifacts,
     ListJobs,
     PurgeExpired,
+    ReadLog,
     ReportFinished,
     RescheduleJob,
+    ResolveSourceAccess,
     RetryJob,
     SearchJobs,
     SubmitJob,
@@ -60,6 +64,7 @@ from .events.broker import InProcessChangeBroker
 from .events.ports import ChangeBroker
 from .events.publisher import ChangePublisher
 from .events.sse import SseConnections
+from .runner_ports import SourceCredentialIssuer
 from .settings import ApiSettings
 
 
@@ -81,6 +86,10 @@ class CoreUseCases:
     get_job: GetJob
     get_job_history: GetJobHistory
     get_audit_log: GetAuditLog
+    append_log: AppendLog
+    read_log: ReadLog
+    list_artifacts: ListArtifacts
+    resolve_source_access: ResolveSourceAccess
     create_runner: CreateRunner
     replace_allowlist: ReplaceCapabilityAllowlist
     get_allowlist: GetCapabilityAllowlist
@@ -119,6 +128,10 @@ class CoreUseCases:
             get_job=GetJob(deps),
             get_job_history=GetJobHistory(deps),
             get_audit_log=GetAuditLog(deps),
+            append_log=AppendLog(deps),
+            read_log=ReadLog(deps),
+            list_artifacts=ListArtifacts(deps),
+            resolve_source_access=ResolveSourceAccess(deps),
             create_runner=CreateRunner(deps),
             replace_allowlist=ReplaceCapabilityAllowlist(deps),
             get_allowlist=GetCapabilityAllowlist(deps),
@@ -160,6 +173,8 @@ class ApiDependencies:
     broker: ChangeBroker
     publisher: ChangePublisher
     sse_connections: SseConnections
+    source_credentials: SourceCredentialIssuer | None = None
+    """004: ソースの取得資格の発行元。未設定なら、取得資格の要求は 422 source_not_available。"""
 
     @classmethod
     def assemble(
@@ -172,6 +187,7 @@ class ApiDependencies:
         credentials: ServiceCredentialRepository,
         access_source: AccessConfigSource,
         broker: ChangeBroker | None = None,
+        source_credentials: SourceCredentialIssuer | None = None,
     ) -> ApiDependencies:
         """アクセス設定を読み込み(不正なら AccessConfigInvalid)、認証の部品をつないで作る。"""
         access = AccessConfigHolder(access_source.load())
@@ -213,6 +229,7 @@ class ApiDependencies:
             broker=change_broker,
             publisher=ChangePublisher(change_broker, lambda: _runner_states(core)),
             sse_connections=SseConnections(settings.sse_max_connections),
+            source_credentials=source_credentials,
         )
 
 

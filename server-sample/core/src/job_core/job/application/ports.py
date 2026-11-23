@@ -12,6 +12,7 @@ from typing import Protocol, Self
 from job_core.job.domain.audit import AuditOperation, AuditOutcome, AuditRecord
 from job_core.job.domain.events import JobCompleted
 from job_core.job.domain.job import Job
+from job_core.job.domain.output import JobArtifactRef, JobLogChunk, StoredLogChunk
 from job_core.job.domain.queue import Queue
 from job_core.job.domain.states import JobState
 from job_core.job.domain.values import DuplicateKey, RunnerRequirement
@@ -153,6 +154,28 @@ class RunnerEligibility(Protocol):
 
 
 @dataclass(frozen=True)
+class AppendResult:
+    duplicate: bool
+    stored_up_to_seq: int
+    """0 から連続して保存されている最後の seq。1 件も連続していなければ -1。"""
+
+
+class JobLogStore(Protocol):
+    """004: ジョブのログのチャンクと成果物の参照の保存(contracts/ports.md「JobLogStore」)。
+
+    (job_id, seq) が一意。同じ内容の再送は冪等(duplicate=True)、異なる内容は LogSeqConflict。
+    総量が上限を超える追加は LogQuotaExceeded(保存しない)。ジョブの状態の遷移とは別のトランザクション。
+    """
+
+    def append(self, job_id: JobId, chunk: JobLogChunk, at: datetime, quota_chars: int) -> AppendResult: ...
+    def read(self, job_id: JobId, after_seq: int, limit: int) -> list[StoredLogChunk]: ...
+    def size(self, job_id: JobId) -> int: ...
+    def purge(self, job_id: JobId) -> int: ...
+    def save_artifacts(self, job_id: JobId, artifacts: Iterable[JobArtifactRef]) -> None: ...
+    def list_artifacts(self, job_id: JobId) -> list[JobArtifactRef]: ...
+
+
+@dataclass(frozen=True)
 class CoreDependencies:
     """ユースケースが使うポートの束。起動時の設定で実装を差し替える(憲章 原則 1)。"""
 
@@ -161,3 +184,6 @@ class CoreDependencies:
     clock: Clock
     ids: IdGenerator
     max_conflict_retries: int = field(default=3)
+    outputs: JobLogStore | None = None
+    """004: ログ・成果物の参照の保存。未設定なら、ログ・成果物の操作は使えない。"""
+    log_quota_chars: int = 10 * 1024 * 1024

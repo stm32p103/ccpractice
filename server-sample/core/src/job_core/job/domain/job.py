@@ -16,6 +16,7 @@ from job_core.shared.ids import JobId, RunnerId, SubjectId, is_valid_id
 from .definition import JobDefinition, Submitter
 from .errors import AbortAlreadyRequested, InvalidStateTransition, ReasonRequired, RunnerMismatch
 from .events import JobCompleted
+from .output import ResultDetail
 from .states import JobState
 from .values import Reason, ResultSummary
 
@@ -55,6 +56,7 @@ class Job:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     result_summary: ResultSummary | None = None
+    result_detail: ResultDetail | None = None
     cancellation: CancellationRecord | None = None
     retry_of: JobId | None = None
     version: int = 0
@@ -135,6 +137,7 @@ class Job:
         summary: ResultSummary | None,
         at: datetime,
         event_id: str,
+        detail: ResultDetail | None = None,
     ) -> None:
         self._require_reporting_runner(runner_id, "finish")
         if outcome not in (JobState.SUCCEEDED, JobState.FAILED):
@@ -143,6 +146,7 @@ class Job:
             # 停止の確認より先に終了が確定した。終了を正とし、中断の要求はその旨とともに残す。
             self.cancellation = replace(self.cancellation, superseded_by=outcome)
         self.result_summary = summary
+        self.result_detail = detail
         self._finish_with(outcome, at, event_id)
 
     # ------------------------------------------------------------------ 内部

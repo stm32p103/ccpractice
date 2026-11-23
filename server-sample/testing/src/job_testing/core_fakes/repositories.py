@@ -16,12 +16,20 @@ from datetime import datetime
 from types import TracebackType
 from typing import Self
 
-from job_core.job.application.ports import AuditFilter, JobSearchCriteria, OutboxEntry, OutboxStatus, Page
+from job_core.job.application.ports import (
+    AppendResult,
+    AuditFilter,
+    JobSearchCriteria,
+    OutboxEntry,
+    OutboxStatus,
+    Page,
+)
 from job_core.job.application.search_cursor import decode_search_cursor, encode_search_cursor
 from job_core.job.domain.audit import AuditOutcome, AuditRecord
-from job_core.job.domain.errors import ConcurrencyConflict, ValidationFailed
+from job_core.job.domain.errors import ConcurrencyConflict, LogQuotaExceeded, LogSeqConflict, ValidationFailed
 from job_core.job.domain.events import JobCompleted
 from job_core.job.domain.job import Job
+from job_core.job.domain.output import JobArtifactRef, JobLogChunk, StoredLogChunk
 from job_core.job.domain.queue import Queue
 from job_core.job.domain.states import JobState
 from job_core.job.domain.values import DuplicateKey
@@ -337,3 +345,59 @@ def _same(stored: Job, working: Job) -> bool:
         "submitted_at",
     )
     return all(getattr(stored, f) == getattr(working, f) for f in fields)
+
+
+class InMemoryJobLogStore:
+    """004: JobLogStore のメモリ実装(contracts/ports.md「JobLogStore」)。ジョブの UoW とは独立に確定する。"""
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._chunks: dict[JobId, dict[int, tuple[JobLogChunk, datetime]]] = {}
+        self._artifacts: dict[JobId, list[JobArtifactRef]] = {}
+
+    def append(self, job_id: JobId, chunk: JobLogChunk, at: datetime, quota_chars: int) -> AppendResult:
+        with self._lock:
+            chunks = self._chunks.setdefault(job_id, {})
+            existing = chunks.get(chunk.seq)
+            if existing is not None:
+                if existing[0] != chunk:
+                    raise LogSeqConflict(job_id, chunk.seq)
+                return AppendResult(True, self._contiguous(chunks))
+            if self._size(chunks) + len(chunk.text) > quota_chars:
+                raise LogQuotaExceeded(job_id)
+            chunks[chunk.seq] = (chunk, at)
+            return AppendResult(False, self._contiguous(chunks))
+
+    def read(self, job_id: JobId, after_seq: int, limit: int) -> list[StoredLogChunk]:
+        with self._lock:
+            chunks = self._chunks.get(job_id, {})
+            seqs = sorted(s for s in chunks if s > after_seq)[:limit]
+            return [StoredLogChunk(s, chunks[s][0].stream, chunks[s][0].text, chunks[s][1]) for s in seqs]
+
+    def size(self, job_id: JobId) -> int:
+        with self._lock:
+            return self._size(self._chunks.get(job_id, {}))
+
+    def purge(self, job_id: JobId) -> int:
+        with self._lock:
+            removed = len(self._chunks.pop(job_id, {})) + len(self._artifacts.pop(job_id, []))
+            return removed
+
+    def save_artifacts(self, job_id: JobId, artifacts: Iterable[JobArtifactRef]) -> None:
+        with self._lock:
+            self._artifacts[job_id] = list(artifacts)
+
+    def list_artifacts(self, job_id: JobId) -> list[JobArtifactRef]:
+        with self._lock:
+            return list(self._artifacts.get(job_id, []))
+
+    @staticmethod
+    def _size(chunks: dict[int, tuple[JobLogChunk, datetime]]) -> int:
+        return sum(len(c.text) for c, _ in chunks.values())
+
+    @staticmethod
+    def _contiguous(chunks: dict[int, tuple[JobLogChunk, datetime]]) -> int:
+        seq = -1
+        while seq + 1 in chunks:
+            seq += 1
+        return seq

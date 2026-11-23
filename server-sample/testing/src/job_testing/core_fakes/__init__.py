@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from job_core.job.application import (
+    AppendLog,
     AssignNextJob,
     CancelJob,
     ConfirmStopped,
@@ -18,10 +19,13 @@ from job_core.job.application import (
     GetAuditLog,
     GetJob,
     GetJobHistory,
+    ListArtifacts,
     ListJobs,
     PurgeExpired,
+    ReadLog,
     ReportFinished,
     RescheduleJob,
+    ResolveSourceAccess,
     RetryJob,
     SearchJobs,
     SubmitJob,
@@ -53,7 +57,7 @@ from job_core.runner.application import (
 )
 
 from .clock_ids import FakeClock, FakeSecretGenerator, SequentialIdGenerator
-from .repositories import InMemoryStore, InMemoryUnitOfWork
+from .repositories import InMemoryJobLogStore, InMemoryStore, InMemoryUnitOfWork
 from .runner_repositories import InMemoryRunnerCatalog
 from .runners import FakeRunnerEligibility
 
@@ -62,6 +66,7 @@ __all__ = [
     "FakeClock",
     "FakeRunnerEligibility",
     "FakeSecretGenerator",
+    "InMemoryJobLogStore",
     "InMemoryRunnerCatalog",
     "InMemoryStore",
     "InMemoryUnitOfWork",
@@ -87,6 +92,11 @@ class CoreFixture:
     report_finished: ReportFinished
     confirm_stopped: ConfirmStopped
     purge: PurgeExpired
+    outputs: InMemoryJobLogStore
+    append_log: AppendLog
+    read_log: ReadLog
+    list_artifacts: ListArtifacts
+    resolve_source_access: ResolveSourceAccess
     list_jobs: ListJobs
     search_jobs: SearchJobs
     get_job: GetJob
@@ -128,6 +138,7 @@ def build_core(
     fake_runners = FakeRunnerEligibility()
     clock = FakeClock()
     ids = SequentialIdGenerator()
+    outputs = InMemoryJobLogStore()
     catalog = InMemoryRunnerCatalog(store.runner_state, store.lock)
     runner_eligibility = RunnerEligibilityService(catalog)
     eligibility: RunnerEligibility = runner_eligibility if use_runner_management else fake_runners
@@ -137,6 +148,7 @@ def build_core(
         clock=clock,
         ids=ids,
         max_conflict_retries=max_conflict_retries,
+        outputs=outputs,
         catalog=catalog,
         secrets=FakeSecretGenerator(),
         timing=timing or RunnerTimingPolicy(),
@@ -156,6 +168,11 @@ def build_core(
         report_finished=ReportFinished(core_deps),
         confirm_stopped=ConfirmStopped(core_deps),
         purge=PurgeExpired(core_deps),
+        outputs=outputs,
+        append_log=AppendLog(core_deps),
+        read_log=ReadLog(core_deps),
+        list_artifacts=ListArtifacts(core_deps),
+        resolve_source_access=ResolveSourceAccess(core_deps),
         list_jobs=ListJobs(core_deps),
         search_jobs=SearchJobs(core_deps),
         get_job=GetJob(core_deps),

@@ -118,3 +118,20 @@ class TestSqlSessions(SessionContract):
 
 
 _UNUSED: tuple[Any, ...] = (Mapping, NewRunnerUow, RunnerRequirement)
+
+
+# --- 004: ログ・成果物の参照(JobLogStore)。PostgreSQL がある環境でだけ実行する -------------------------------------
+
+
+from job_core.job.application.ports import JobLogStore  # noqa: E402
+from job_core_persistence import SqlJobLogStore  # noqa: E402
+from job_testing.contracts.job_log import JobLogStoreContract  # noqa: E402
+
+
+@pytest.fixture
+def log_store(engine: Engine) -> JobLogStore:
+    return SqlJobLogStore(engine)
+
+
+class TestSqlJobLogStore(JobLogStoreContract):
+    pass

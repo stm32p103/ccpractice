@@ -67,6 +67,12 @@ class SseCapacityExceeded(ApiError):
     code = "sse_capacity_exceeded"
 
 
+class SourceNotAvailableError(ApiError):
+    """取得資格の発行元がない構成(004)。"""
+
+    code = "source_not_available"
+
+
 class MethodNotAllowed(ApiError):
     code = "method_not_allowed"
 
@@ -177,6 +183,18 @@ PROBLEMS: dict[str, ProblemSpec] = {
     "concurrency_conflict": ProblemSpec(
         409, "同時の更新と衝突", "同時の更新と衝突した。再試行してよい。", headers={"Retry-After": "1"}
     ),
+    "target_not_running": ProblemSpec(
+        409,
+        "対象が実行中でない",
+        "対象のジョブが実行中でない。",
+        {"job_id": _attr("job_id"), "from_state": _attr("state")},
+    ),
+    "log_seq_conflict": ProblemSpec(
+        409, "ログの seq が衝突", "同じ seq で内容が異なるログのチャンクがある。", {"job_id": _attr("job_id")}
+    ),
+    "log_quota_exceeded": ProblemSpec(
+        409, "ログの総量の上限", "ジョブごとのログの総量の上限を超える。", {"job_id": _attr("job_id")}
+    ),
     "payload_too_large": ProblemSpec(413, "本文が大きすぎる", "要求の本文が上限を超えている。"),
     "validation_failed": ProblemSpec(
         422,
@@ -184,6 +202,7 @@ PROBLEMS: dict[str, ProblemSpec] = {
         "入力が規則を満たさない。",
         {"field": _attr("field"), "reason": _attr("detail")},
     ),
+    "source_not_available": ProblemSpec(422, "取得資格を発行できない", "ソースの取得資格の発行元がない。"),
     "no_eligible_runner": ProblemSpec(422, "満たせるランナーがない", "要件を満たしうるランナーが登録されていない。"),
     "self_anchor": ProblemSpec(422, "自分自身は基準にできない", "自分自身を基準にした移動はできない。"),
     "reason_required": ProblemSpec(422, "理由が必要", "実行中のジョブの強制中断には理由が必要。"),

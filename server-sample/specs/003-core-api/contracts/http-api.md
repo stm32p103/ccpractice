@@ -154,10 +154,10 @@
 | `403` | `network_not_allowed`(接続元の許可リスト。本文は固定) | — |
 | `403` | `origin_not_allowed`(Cookie での状態変更の `Origin` の不一致) | — |
 | `404` | `job_not_found`、`runner_not_found`、`credential_not_found`、`not_found`(遷移の要らない認証方式の `GET /v1/auth/login` など) | `job_id`、`runner_id`、`credential_id` |
-| `409` | `duplicate_queued_job`、`target_not_queued`、`anchor_not_queued`、`invalid_state_transition`、`abort_already_requested`、`runner_busy`、`runner_has_unfinished_job`、`duplicate_runner_name`、`duplicate_credential_name`、`already_in_maintenance`、`not_in_maintenance`、`runner_deleted`、`lease_expired`、`invalid_lease_transition`、`concurrency_conflict` | `existing_job_id`、`anchor_job_id`、`job_id`、`from_state`、`operation`、`requested_at` |
+| `409` | `duplicate_queued_job`、`target_not_queued`、`anchor_not_queued`、`invalid_state_transition`、`abort_already_requested`、`runner_busy`、`runner_has_unfinished_job`、`duplicate_runner_name`、`duplicate_credential_name`、`already_in_maintenance`、`not_in_maintenance`、`runner_deleted`、`lease_expired`、`invalid_lease_transition`、`concurrency_conflict`、`target_not_running`、`log_seq_conflict`、`log_quota_exceeded`(後ろの 3 つは 004 の追加) | `existing_job_id`、`anchor_job_id`、`job_id`、`from_state`、`operation`、`requested_at` |
 | `405` | `method_not_allowed` | — |
 | `413` | `payload_too_large` | — |
-| `422` | `validation_failed`、`no_eligible_runner`、`self_anchor`、`reason_required`、`invalid_declaration`、`invalid_requirement`、`runner_not_registered` | `field`、`reason`(`validation_failed`。`reason` はコアの固定の規則の文面で、入力値を含まない。`detail` は全 `code` で固定の文面)、`violations`(`invalid_declaration`。キーと理由だけ) |
+| `422` | `validation_failed`、`no_eligible_runner`、`self_anchor`、`reason_required`、`invalid_declaration`、`invalid_requirement`、`runner_not_registered`、`source_not_available`(004 の追加) | `field`、`reason`(`validation_failed`。`reason` はコアの固定の規則の文面で、入力値を含まない。`detail` は全 `code` で固定の文面)、`violations`(`invalid_declaration`。キーと理由だけ) |
 | `500` | `internal_error` | — |
 | `503` | `identity_provider_unavailable`、`sse_capacity_exceeded` | — |
 

@@ -31,6 +31,7 @@ from .identity import (
     InMemoryServiceCredentialRepository,
     InMemorySessionRepository,
 )
+from .source_credentials import FakeSourceCredentialIssuer
 
 ALL_ROLE_PERMISSIONS: dict[str, list[str]] = {
     "viewer": ["job.general"],
@@ -52,6 +53,7 @@ ALL_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "runner.manage",
         "access.manage",
     ],
+    "reader": ["job.general", "job.read_output"],
 }
 
 DEFAULT_ACCESS: dict[str, Any] = {
@@ -61,6 +63,7 @@ DEFAULT_ACCESS: dict[str, Any] = {
         "g-member": ["member"],
         "g-operator": ["operator"],
         "g-admin": ["admin"],
+        "g-reader": ["reader"],
     },
     "default_roles": ["viewer"],
     "service": {
@@ -101,6 +104,7 @@ class ApiFixture:
     sessions: InMemorySessionRepository
     credentials: InMemoryServiceCredentialRepository
     access_source: InMemoryAccessConfigSource
+    source_issuer: FakeSourceCredentialIssuer | None = None
     _counter: int = 0
 
     def login_as(self, subject: str, groups: Iterable[str] = ()) -> str:
@@ -129,6 +133,10 @@ class ApiFixture:
 
     def operator(self, subject: str = "op") -> str:
         return self.login_as(subject, ["g-operator"])
+
+    def reader(self, subject: str = "reader") -> str:
+        """ログ・成果物の参照の権限(job.read_output)を持つ利用者(004)。"""
+        return self.login_as(subject, ["g-reader"])
 
     def viewer(self, subject: str = "viewer") -> str:
         return self.login_as(subject, ["g-viewer"])
@@ -193,6 +201,7 @@ def build_api(
     access: dict[str, Any] | None = None,
     use_runner_management: bool = True,
     raise_server_exceptions: bool = False,
+    with_source_issuer: bool = True,
 ) -> ApiFixture:
     core = build_core(use_runner_management=use_runner_management)
     identity = FakeIdentityProvider()
@@ -200,6 +209,7 @@ def build_api(
     credentials = InMemoryServiceCredentialRepository()
     config = AccessConfig.from_mapping(access or DEFAULT_ACCESS)
     access_source = InMemoryAccessConfigSource(config)
+    issuer = FakeSourceCredentialIssuer(core.clock.now) if with_source_issuer else None
     deps = ApiDependencies.assemble(
         core=use_cases_of(core),
         settings=settings or ApiSettings(),
@@ -207,6 +217,7 @@ def build_api(
         sessions=sessions,
         credentials=credentials,
         access_source=access_source,
+        source_credentials=issuer,
     )
     app = create_app(deps)
     client = TestClient(app, client=("127.0.0.1", 50000), raise_server_exceptions=raise_server_exceptions)
@@ -219,4 +230,5 @@ def build_api(
         sessions=sessions,
         credentials=credentials,
         access_source=access_source,
+        source_issuer=issuer,
     )

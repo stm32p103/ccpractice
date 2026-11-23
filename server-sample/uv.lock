@@ -13,6 +13,10 @@ members = [
     "job-core-persistence",
     "job-core-server",
     "job-platform-workspace",
+    "job-profile-equipment-check",
+    "job-runner-agent",
+    "job-runner-protocol",
+    "job-runner-service",
     "job-testing",
 ]
 
@@ -817,6 +821,10 @@ dependencies = [
     { name = "job-core-api" },
     { name = "job-core-persistence" },
     { name = "job-core-server" },
+    { name = "job-profile-equipment-check" },
+    { name = "job-runner-agent" },
+    { name = "job-runner-protocol" },
+    { name = "job-runner-service" },
     { name = "job-testing" },
 ]
 
@@ -840,6 +848,10 @@ requires-dist = [
     { name = "job-core-api", editable = "core-api" },
     { name = "job-core-persistence", editable = "core-persistence" },
     { name = "job-core-server", editable = "core-server" },
+    { name = "job-profile-equipment-check", editable = "profile-equipment-check" },
+    { name = "job-runner-agent", editable = "runner-agent" },
+    { name = "job-runner-protocol", editable = "runner-protocol" },
+    { name = "job-runner-service", editable = "runner-service" },
     { name = "job-testing", editable = "testing" },
 ]
 
@@ -858,6 +870,52 @@ dev = [
 ]
 
 [[package]]
+name = "job-profile-equipment-check"
+version = "0.1.0"
+source = { editable = "profile-equipment-check" }
+dependencies = [
+    { name = "job-runner-agent" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "job-runner-agent", editable = "runner-agent" }]
+
+[[package]]
+name = "job-runner-agent"
+version = "0.1.0"
+source = { editable = "runner-agent" }
+dependencies = [
+    { name = "httpx" },
+    { name = "job-runner-protocol" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "job-runner-protocol", editable = "runner-protocol" },
+]
+
+[[package]]
+name = "job-runner-protocol"
+version = "0.1.0"
+source = { editable = "runner-protocol" }
+
+[[package]]
+name = "job-runner-service"
+version = "0.1.0"
+source = { editable = "runner-service" }
+dependencies = [
+    { name = "job-profile-equipment-check" },
+    { name = "job-runner-agent" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "job-profile-equipment-check", editable = "profile-equipment-check" },
+    { name = "job-runner-agent", editable = "runner-agent" },
+]
+
+[[package]]
 name = "job-testing"
 version = "0.1.0"
 source = { editable = "testing" }
@@ -865,6 +923,8 @@ dependencies = [
     { name = "httpx" },
     { name = "job-core" },
     { name = "job-core-api" },
+    { name = "job-runner-agent" },
+    { name = "job-runner-protocol" },
     { name = "pytest" },
 ]
 
@@ -873,6 +933,8 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "job-core", editable = "core" },
     { name = "job-core-api", editable = "core-api" },
+    { name = "job-runner-agent", editable = "runner-agent" },
+    { name = "job-runner-protocol", editable = "runner-protocol" },
     { name = "pytest", specifier = ">=8.3" },
 ]
 

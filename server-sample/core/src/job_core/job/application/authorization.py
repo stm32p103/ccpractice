@@ -67,6 +67,11 @@ def authorize_view(principal: Principal) -> None:
     _require_all(principal, Permission.GENERAL)
 
 
+def authorize_read_output(principal: Principal) -> None:
+    """ログ・成果物の参照の閲覧(004)。JOB_READ_OUTPUT。"""
+    _require_all(principal, Permission.JOB_READ_OUTPUT)
+
+
 def authorize_audit_read_all(principal: Principal) -> None:
     """監査ログ全体の閲覧。AUDIT_READ_ALL。"""
     _require_all(principal, Permission.AUDIT_READ_ALL)

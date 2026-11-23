@@ -2,7 +2,8 @@
 
 JOB_SUBMIT 〜 SUBMIT_ON_BEHALF の 7 種は 001 spec FR-023 の権限、JOB_EXECUTE と RETENTION_PURGE は
 001 plan で追加した権限(001 research.md R8)。RUNNER_MANAGE・RUNNER_REPORT・RUNNER_SWEEP は
-002 の権限(002 research.md R10)。ACCESS_MANAGE は 003 の権限(003 research.md R6)。
+002 の権限(002 research.md R10)。ACCESS_MANAGE は 003 の権限(003 research.md R6)、
+JOB_READ_OUTPUT は 004 の権限(004 data-model.md §3.1)。
 可否は権限だけで判定する(憲章 原則 9)。
 """
 
@@ -26,3 +27,5 @@ class Permission(StrEnum):
     RUNNER_SWEEP = "runner.sweep"
     ACCESS_MANAGE = "access.manage"
     """003: サービス用の認証情報・アクセス設定(対応表)・セッションの管理。人間のロールに載せられる。"""
+    JOB_READ_OUTPUT = "job.read_output"
+    """004: ジョブのログ・成果物の参照の閲覧。人間のロールに載せられる。サービス用の上限にも載せられる。"""

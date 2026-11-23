@@ -99,9 +99,30 @@
 
 「実装との対応」の表は、003 の実装の完了時点で、6 節に追記する(T097)。
 
-## 4. 004 ランナーエージェント(004 の plan で追記)
+## 4. 004 ランナーエージェント(2026-11-22 追記。根拠: specs/004-runner-agent/research.md)
 
-- 作業フォルダ外の情報の持ち出し(憲章 S1)、環境変数の継承、パスの逸脱、外部ツール自体の悪意。
+守るもの(A4 の具体化): ランナー PC の作業フォルダ外のファイル、環境変数、エージェントのトークン・設定・状態、ツールのアカウントの資格、取得資格、他のジョブの作業フォルダ、成果物の保存先。
+
+信頼の前提(P4 の具体化): 実行を許可するツール(設定の `tools`)とリポジトリ(許可リスト)は、信頼できるものに限る。ただし、ツールの**不具合・侵害**は起こりうるものとして、OS の権限で作業フォルダ外への到達を制限する。信頼しない: ジョブの payload・入力の値、外部ツールの出力・ファイル、ネットワーク上の応答(コア API を含む。HTTPS で本人性を確認する)。
+
+| # | 脅威 | 対策 | 担保するテスト(予定) | 残るリスク |
+|---|---|---|---|---|
+| T-W1 | **外部ツールが作業フォルダ外を読む**(ファイル、他のジョブ、設定) | 専用の低権限の**ツールのアカウント**で実行し、作業フォルダ以外への読み取りを ACL で与えない。エージェントのアカウントとは別(R4)。作業フォルダはジョブごとに新規、終了で削除(FR-013) | V6、V38(`-m twoaccount`)、`ProcessLauncherContract` | OS の既定で全員に読み取りを許す場所(`Windows`・`Program Files` 等)は読める。仮想化がないため、完全な隔離ではない(S5)。制限付きトークン・AppContainer は将来の強化 |
+| T-W2 | **環境変数の継承による秘密の漏えい** | 環境ブロックを空から組み立てる(`env_allow` の固定値 + エージェントの定める変数 + エグゼキュータに許可した名前)。親の値は読まない(R5) | V7、`ProcessLauncherContract`(親のダミーが子に見えない) | `env_allow` に秘密を書く設定の誤り(設定のレビューと検証。V36) |
+| T-W3 | **パスの逸脱**(`..`、絶対、ドライブ、UNC、デバイス名、代替ストリーム、シンボリックリンク、ジャンクション) | `WorkPath` の検査を、文字列と実ファイル(リパースポイントの判定)の両方で行い、すべての引数・作業ディレクトリ・成果物のパターンに適用(R7)。拒否は監査に記録 | V8(SC-004)、パスの検査の単体(網羅)、Hypothesis | 検査から使用までの間のリンクの差し替え(TOCTOU)。ツールのアカウントに作業フォルダ外の権限がないこと、成果物の収集時に再検査することで軽減 |
+| T-W4 | **payload による任意のプログラム・引数の注入** | 起動できるのは設定の `tool_id` だけ。引数は配列で渡し、シェルを介さない。エグゼキュータはプロセスを起動しない(計画を返すだけ)(R7) | `ExecutorContract`(Hypothesis)、アーキテクチャテスト(エグゼキュータの禁止 import)、`ProcessLauncherContract`(特殊文字) | 登録したツール自体が、引数から任意のコードを実行できる場合(ツールの選定・レビュー) |
+| T-W5 | **ログ経由の漏えい** | マスク(完全一致 + パターン)、量の制限、ログは作業フォルダ内のツールの出力だけ(R10)。マスクは補助的な対策で、主たる防御ではない | V10、マスクの単体(境界をまたぐ一致、PEM) | 未知の形の秘密はマスクされない。主たる防御は T-W1・T-W2 |
+| T-W6 | **成果物経由の漏えい・資源の枯渇** | 作業フォルダ内の、明示したパターンに一致する通常のファイルだけ。リパースポイントを辿らない。件数・大きさ・合計の上限。参照だけをコアへ送る(R11)。保存先は設定した 1 か所だけで、ジョブごとのサブフォルダに書く。保存先のアクセス権の設定は範囲外(運用。チーム全体で参照するため) | V11、`ArtifactStoreContract` | パターンに一致するファイルの中身に機密が含まれる場合(ツールの信頼に依存)。保存先のアクセス権は運用に依存する(範囲外)。**広く読めるように設定された場合、他のジョブの成果物が参照できる**。ツールのアカウントには、実行結果フォルダへの権限を与えない運用とし、エージェントは保存先のパスをツールへ渡さない |
+| T-W7 | **外部ツールの外向きの通信** | ファイアウォールのユーザー単位の規則で、ツールのアカウントの外向きを遮断。エージェントは起動時に規則を自己検査し、なければ起動を拒否する(R17) | V9、V37、V38、`test_egress`(偽のサーバー) | 規則の設定は 009。規則を設定した PC でのみ有効。構成の誤り(V37 で検知) |
+| T-W8 | **取得資格の漏えい** | 取得資格は、ジョブごとに発行し、短命・読み取り専用・メモリのみ。取得の直後に破棄し、エグゼキュータ・ツールへ渡さない。完全一致のマスク(R12) | V23、資格の非露出テスト(Hypothesis) | 取得先の側で、資格の有効期間内に悪用されること(短命にして軽減) |
+| T-W9 | **ランナーのトークン・設定・状態の窃取** | トークンは資格情報の保管機能(エージェントのアカウントだけ)。状態フォルダの ACL。ツールは別のアカウント(R4、R15) | V38、`SecretSource` の契約テスト | エージェントのアカウントの侵害(別の脅威。OS の運用) |
+| T-W10 | **許可リスト外のリポジトリ・ジョブ種別の実行** | 許可リスト(空が既定)を、作業フォルダの作成前に検査(S3)。対応のないジョブ種別は起動しない | V5、V22、V26 | 許可したリポジトリのコードの信頼(S5) |
+| T-W11 | **孤児のプロセス・資源の枯渇・二重実行** | Job Object(`KILL_ON_JOB_CLOSE`)で子孫を終了。タイムアウト、メモリの上限、ディスクの空きの確認、同時に 1 件。リース切れは失敗として確定し、再実行しない(Q1)(R6、R8、R14) | V12〜V14、V17、`ProcessLauncherContract` | 強制終了で、ツールが外部の機材を中途半端な状態にすること(ツール・機材の運用) |
+| T-W12 | **偽のコア・中間者によるエージェントの悪用**(トークンの盗聴、偽のジョブ) | `prod` は HTTPS のみ、証明書の検証を無効にできない。トークンは資格情報の保管機能。取得する payload は、設定の許可(ツール・リポジトリ)を越えられない | 設定の検証、`CoreClientContract` | 組織の CA の侵害。イントラネット内の信頼(憲章 原則 8) |
+| T-W13 | **報告の欠落・重複・偽装** | 結果のジャーナル(確定まで)、確定の拒否の扱い、割り当て先のランナーだけが報告できる(001 T-3、003 T-A4)(R13) | V15、V16、V25 | リースを超える途絶は、結果が受理されない(Q1 の確定の動作) |
+| T-W14 | **テレメトリ・外部資産の混入** | エージェントは外部へ通信しない(台帳 E4〜E7 の宛先だけ)。禁止 API の検査と偽のサーバーで検証(S4) | V9、アーキテクチャテスト | 依存ライブラリの将来の版の既定の変更(`uv.lock` で固定し、更新時に検出。003 T-A12 と同じ) |
+
+残るリスクの総括: 仮想化が使えないため、**ツールの不具合・侵害**に対する防御は OS の権限(2 アカウント、ACL、ファイアウォール、Job Object)に限られる。したがって、実行を許可するツールとリポジトリを信頼できるものに限る(S5)。ログのマスクは補助的な対策である。ランナー PC のセットアップ(アカウント、ACL、ファイアウォール、共有フォルダ)の誤りが、対策の前提を崩すため、009 のスクリプトによる再現と自己検査(V36〜V38)で担保する。
 
 ## 5. 005 GitHub 連携(005 の plan で追記)
 
@@ -151,6 +172,27 @@
 | T-A12 | `tests/architecture/test_forbidden_apis.py`(通信 API の直接の利用を禁止)、`app.py::TELEMETRY_DISABLED`(**FastAPI の組み込みのテレメトリは、環境変数 `FASTAPI_OTEL_AUTO_CONFIGURE` で外部へ書き出せ、検証エラーの入力値や例外の内容も載りうるため、すべて無効にする**) | `acceptance/test_egress.py`(外向きの接続 0 件、テレメトリの無効化)、`architecture/test_forbidden_apis.py`、`architecture/test_vocabulary.py` |
 
 **実装の完了時点で確認した、残るリスクの追加**: FastAPI などの依存のライブラリが、将来の版で外部への通信(テレメトリなど)を既定で有効にする可能性がある。`uv.lock` で版を固定し、版を上げるときに `test_egress.py`(外向きの接続の検知)を通すことで検出する。
+
+### 004 ランナーエージェント(実装の完了時点。2026-11-23。2 アカウント方式の実機の検証と、ランナー PC の構築(009)は未了)
+
+| 脅威 | 実装 | テスト |
+|---|---|---|
+| T-W1 | `runner-agent/.../launcher/logon.py`(ツール用のアカウントで起動。Job Object)、`guard/workpath.py`(作業フォルダは新規・終了で削除) | `tests/windows/test_us6_twoaccount.py`(`-m twoaccount`。**この PC では未実施**)、`tests/acceptance/test_us3_*`(後始末)。dev の `DirectLauncher` は同じアカウントで動くため、作業フォルダ外のファイルをツール自体が読むことは防げない(脅威モデルの残るリスクのとおり) |
+| T-W2 | `guard/environment.py`(空から組み立て) | `tests/unit/test_environment.py`(Hypothesis)、`tests/acceptance/test_us2_no_exfiltration.py::test_us2_1_us2_2_*`、`ProcessLauncherContract`(親のダミーが子に見えない) |
+| T-W3 | `guard/workpath.py`(文字列 + リパースポイントの検査)、`execution.py::_validate_plan`、`artifacts/collect.py` | `tests/unit/test_workpath.py`(網羅 + Hypothesis)、`test_us2_no_exfiltration.py::test_us2_3_*`(ジャンクションは `-m windows`) |
+| T-W4 | `execution.py`(`tool_id` の登録簿、引数は配列、エグゼキュータは計画を返すだけ)、`guard/allowlist.py` | `testing/contracts/executor.py`(Hypothesis)、`tests/architecture/test_executor_imports.py`、`ProcessLauncherContract`(特殊文字) |
+| T-W5 | `guard/masking.py`、`logs.py` | `tests/unit/test_masking.py`(PEM・境界・Hypothesis)、`test_us2_no_exfiltration.py::test_us2_5_*`、`test_us1_logs.py` |
+| T-W6 | `artifacts/collect.py`、`artifacts/shared_folder.py`(設定した 1 か所だけ。参照だけをコアへ。既定は `disabled`) | `tests/contract/test_shared_folder_store.py`、`test_us2_no_exfiltration.py::test_us2_6_*`。保存先のアクセス権は範囲外(運用) |
+| T-W7 | `runner-service/.../selfcheck.py`(ファイアウォール規則の自己検査)。規則の作成は 009 | `runner-service/tests/test_wiring.py`(自己検査)、`test_us2_no_exfiltration.py::test_us2_4_*`(外向きの接続 0 件)。**ツール側の遮断は `-m twoaccount`・009 の後に実機で** |
+| T-W8 | `execution.py::_fetch_source`(取得の直後に参照を破棄。マスクの完全一致にだけ使う)、`source.py` | `tests/acceptance/test_us6_allowlist_and_source.py::test_v23_*` |
+| T-W9 | `secret_source.py`(資格情報の保管機能)、`launcher/logon.py`(別アカウント)、`selfcheck.py`(ACL) | `tests/unit/test_secret_source.py`。**別アカウントによる読み取りの拒否は `-m twoaccount`(未実施)** |
+| T-W10 | `execution.py`(許可リストを作業フォルダの作成前に検査)、`settings.py`(既定は空) | `test_us6_allowlist_and_source.py`、`tests/unit/test_settings.py` |
+| T-W11 | `launcher/winapi.py`(Job Object。`KILL_ON_JOB_CLOSE`)、`execution.py`(タイムアウト・中断・後始末)、`core/.../sweep.py`(リース切れは失敗として確定) | `tests/acceptance/test_us3_*`、`test_us4_*`(Windows 上で、子・孫の消滅を確認)、`core/tests/acceptance/runner/test_004_output.py` |
+| T-W12 | `core_client.py`(HTTPS のみ。`prod` で証明書の検証を無効にできない)、`settings.py` | `tests/unit/test_settings.py`、`testing/contracts/runner_protocol.py`(Fake と実 API の一致) |
+| T-W13 | `journal.py`(結果のジャーナル)、`agent.py`(起動時の回復)、`core_client.py`(確定の拒否) | `tests/acceptance/test_us4_outage_and_recovery.py` |
+| T-W14 | `tests/architecture/test_executor_imports.py`(通信の部品は `core_client.py` だけ。テレメトリの import なし) | 同左、`test_us2_no_exfiltration.py::test_us2_4_*`(外向きの接続 0 件。送信先は 1 か所) |
+
+**実装の完了時点で確認した、残るリスクの追加**: (1) 2 アカウント方式(`CreateProcessWithLogonW`)の実機・サービスの文脈での成立は、スパイク(`runner-agent/spikes/logon_spike.py`)と `-m twoaccount` で確認する(この開発環境では未実施。`LogonLauncher` は未検証)。(2) 取得資格は、ジョブのログのマスクの完全一致のため、ジョブの終了までメモリに残る(エグゼキュータ・ツール・状態フォルダ・ログ・環境へは渡さない)。(3) 成果物の保存先のアクセス権が広く設定されると、他のジョブの成果物が参照できる(範囲外・運用)。
 
 ## 7. 改定の手続き
 

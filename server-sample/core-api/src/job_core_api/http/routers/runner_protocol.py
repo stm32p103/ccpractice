@@ -9,15 +9,22 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from job_core.job.domain.output import ArtifactKind, JobArtifactRef, ResultCounters
+
 from ...events.ports import ChangeKind
+from ...runner_ports import SourceNotAvailable
 from ..authn import CurrentPrincipal, Deps
+from ..errors import SourceNotAvailableError
 from ..schemas_runner_protocol import (
     FaultRequest,
     FinishRequest,
     FinishResultOut,
     HeartbeatResultOut,
     JobRequestResultOut,
+    LogChunkIn,
+    LogChunkResultOut,
     RegisterRequest,
+    SourceCredentialOut,
 )
 
 router = APIRouter(prefix="/runner", tags=["runner"])
@@ -74,6 +81,16 @@ def report_finished(job_id: str, body: FinishRequest, principal: CurrentPrincipa
         job_id=job_id,
         outcome=body.outcome,
         result_summary=body.result_summary,
+        exit_code=body.exit_code,
+        failure_reason=body.failure_reason,
+        artifacts=[
+            JobArtifactRef(a.name, ArtifactKind(a.kind), a.reference, a.size_bytes, a.sha256) for a in body.artifacts
+        ],
+        counters=(
+            ResultCounters(body.counters.path_rejections, body.counters.masked_lines, body.counters.log_truncated)
+            if body.counters
+            else None
+        ),
     )
     deps.publisher.job_finished(result)
     deps.publisher.runner_event(principal.subject_id)
@@ -87,3 +104,26 @@ def confirm_stopped(job_id: str, principal: CurrentPrincipal, deps: Deps) -> Fin
     deps.publisher.job_finished(result)
     deps.publisher.runner_event(principal.subject_id)
     return FinishResultOut.of(result)
+
+
+@router.post("/jobs/{job_id}/logs", response_model=LogChunkResultOut, operation_id="runner_append_log")
+def append_log(job_id: str, body: LogChunkIn, principal: CurrentPrincipal, deps: Deps) -> LogChunkResultOut:
+    """ログのチャンクの追加(004)。同じ `seq` の再送は冪等。割り当て先のランナーだけ。"""
+    result = deps.core.append_log(
+        principal, runner_id=principal.subject_id, job_id=job_id, seq=body.seq, stream=body.stream, text=body.text
+    )
+    return LogChunkResultOut(stored_up_to_seq=result.stored_up_to_seq)
+
+
+@router.post("/jobs/{job_id}/source-credential", response_model=SourceCredentialOut,
+operation_id="runner_source_credential")
+def source_credential(job_id: str, principal: CurrentPrincipal, deps: Deps) -> SourceCredentialOut:
+    """ジョブのソースの取得資格(短命・読み取り専用)の要求(004)。割り当て中のジョブのランナーだけ。値を保存・記録しない。"""
+    target = deps.core.resolve_source_access(principal, runner_id=principal.subject_id, job_id=job_id)
+    if deps.source_credentials is None or target.source is None:
+        raise SourceNotAvailableError()
+    try:
+        credential = deps.source_credentials.issue(job_id, target.source, target.revision)
+    except SourceNotAvailable:
+        raise SourceNotAvailableError() from None
+    return SourceCredentialOut(kind=credential.kind, secret=credential.secret, expires_at=credential.expires_at)

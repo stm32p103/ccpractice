@@ -166,3 +166,28 @@ sessions = Table(
     Index("ix_sessions_expires", "expires_at"),
     Index("ix_sessions_revoked", "revoked_at"),
 )
+
+# --- 004: ジョブのログのチャンクと、成果物の参照(中身は持たない。contracts/ports.md「JobLogStore」) ---
+
+job_log_chunks = Table(
+    "job_log_chunks",
+    metadata,
+    Column("job_id", String, primary_key=True),
+    Column("seq", Integer, primary_key=True),
+    Column("stream", String, nullable=False),
+    Column("text", Text, nullable=False),
+    Column("chars", Integer, nullable=False),
+    Column("received_at", TS, nullable=False),
+)
+
+job_artifacts = Table(
+    "job_artifacts",
+    metadata,
+    Column("job_id", String, primary_key=True),
+    Column("position", Integer, primary_key=True),
+    Column("name", String, nullable=False),
+    Column("kind", String, nullable=False),
+    Column("reference", Text, nullable=False),
+    Column("size_bytes", BigInteger, nullable=False),
+    Column("sha256", String, nullable=False),
+)

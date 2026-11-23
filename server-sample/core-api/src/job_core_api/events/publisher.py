@@ -48,6 +48,8 @@ NO_PUBLISH: dict[str, str] = {
     "reload_access_config": "アクセス設定の管理",
     "revoke_sessions_of": "セッションの管理",
     "login": "ログイン前の操作",
+    "runner_append_log": "ログのチャンクの追加。ジョブ・ランナー・待機列の状態を変えない(通知にログの本文を含めない)",
+    "runner_source_credential": "取得資格の発行。ジョブ・ランナー・待機列の状態を変えない",
     "logout": "セッションの管理",
 }
 
