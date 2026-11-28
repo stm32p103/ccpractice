@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dwarf-symbol-resolver"
+version = "0.1.0"
+description = "DWARF Symbol Resolver: C の左辺値 (変数・配列要素・構造体メンバ・ビットフィールド) を ELF/DWARF からアドレス・マスクに解決する"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyelftools>=0.31",
+]
+keywords = ["dwarf", "elf", "embedded", "ram-monitor", "symbol"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Embedded Systems",
+]
+
+[project.scripts]
+dsr-verify-toolchain = "dwarf_symbol_resolver.devtools.verify_toolchain:main"
+dsr-dwarf-survey = "dwarf_symbol_resolver.devtools.survey:main"
+dsr-comment-catalog = "dwarf_symbol_resolver.devtools.comment_catalog:main"
+dsr-comment-check = "dwarf_symbol_resolver.devtools.comment_check:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"dwarf_symbol_resolver.comments" = ["CATALOG.md"]

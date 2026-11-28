@@ -1,0 +1,42 @@
+# 検証する左辺値 (1行1件)
+#   scope::expr  : 関数内 static などのスコープ指定 (例: tick::call_cnt, sample.c::s_count)
+#   !expr        : エラーになることを期待するもの
+# --- 単純 ---
+g_speed
+SPEED
+COUNT
+sample.c::s_count
+tick::call_cnt
+# --- 配列 ---
+g_ar[7]
+TEMP3
+AR_AT(1)
+g_mat[2][3]
+MAT(1, 2)
+# --- 構造体 / ネスト ---
+st.id
+st.ar[1].m[4]
+ST_AR1_M4
+ST_M(2, 5)
+s_inner.m[1]
+# --- ビットフィールド ---
+ST_AR1_LEVEL
+ST_AR1_WIDE
+ST_AR1_BITS.en
+st.ar[0].bits.flags
+S_INNER_MODE
+# --- ## 連結 / enum インデックス ---
+SIG(eng, spd)
+SIG(eng, tmp)
+SIG(mot, spd)
+CH(C).m[0]
+CH_M(B, 3)
+CH_FLAG(A)
+ch[CH_NUM - 1].bits.wide
+# --- 共用体 ---
+st.raw.u32
+RAW_B2
+# --- エラー期待 ---
+!g_ar[8]
+!st.nope
+!no_such_var

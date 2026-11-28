@@ -1,0 +1,71 @@
+{
+  "name": "arm_gcc",
+  "description": "arm-none-eabi-gcc (Cortex-M4), DWARF v2〜v5",
+  "variants": {
+    "v2": [
+      "-gdwarf-2"
+    ],
+    "v3": [
+      "-gdwarf-3"
+    ],
+    "v4": [
+      "-gdwarf-4"
+    ],
+    "v5": [
+      "-gdwarf-5"
+    ]
+  },
+  "preprocess": [
+    "arm-none-eabi-gcc",
+    "-E",
+    "-P",
+    "{src}",
+    "-o",
+    "{out}"
+  ],
+  "compile": [
+    "arm-none-eabi-gcc",
+    "-mcpu=cortex-m4",
+    "-O0",
+    "-g3",
+    "-std=gnu11",
+    "{variant_flags}",
+    "-w",
+    "-c",
+    "{src}",
+    "-o",
+    "{obj}"
+  ],
+  "link": [
+    "arm-none-eabi-gcc",
+    "-mcpu=cortex-m4",
+    "-nostdlib",
+    "-Wl,-e,0",
+    "-o",
+    "{elf}",
+    "{obj}"
+  ],
+  "debug_info": "dwarf_symbol_resolver.sources.dwarf.arm_gcc:ArmGccDwarfSource",
+  "local_static_pattern": "{name}\\.\\d+",
+  "typeof": "__typeof__",
+  "remarks": {
+    "*": [
+      "**左辺値から推定できるか**: 単純変数・多次元配列・構造体のネスト・共用体・ビットフィールド・ファイル内/関数内 static のいずれも, DWARF の型情報とアドレスだけで解決できた。",
+      "**マクロ**: 部分パスを別マクロで深くするもの, 関数形式, `##` 連結 (変数名・enum 名の組み立て) は, コンパイラのプリプロセッサで展開すれば通常の左辺値の式になり, 追加の工夫は不要だった。展開後に残る定数式 (`2 + (1) * 2`) と enum 定数 (`CH_B`, `CH_NUM - 1`) は, 式の評価と DWARF の `DW_TAG_enumerator` で解決できた。",
+      "**コメント**: 変数/メンバの `DW_AT_decl_file`/`DW_AT_decl_line` からソース行を引き, 2形式 (A: `[unit] LSB= OFS=`, B: `///< unit:, lsb:, ofs:, desc:`) を取得できた。配列要素の場合は配列の宣言行のコメントを使う。",
+      "**関数内 static**: シンボル名は `call_cnt.0` のように番号が付く。DWARF では関数の子として出るので `関数名::変数名` で特定できた。コンパイラの正解 (`&`) は関数外から取れないため, シンボル表のアドレスとの一致のみ確認。"
+    ],
+    "v2": [
+      "**ビットフィールド**: 旧形式の `DW_AT_bit_offset` (格納単位の MSB から数える) が使われる。リトルエンディアンでは `位置 = メンバ位置*8 + 格納単位ビット数 - bit_offset - bit_size` の変換が必要で, この変換でコンパイラの正解と一致した。 メンバ位置 `DW_AT_data_member_location` はブロック形式 (`DW_OP_plus_uconst`) で, 式の解釈が必要。"
+    ],
+    "v3": [
+      "**ビットフィールド**: 旧形式の `DW_AT_bit_offset` (格納単位の MSB から数える) が使われる。リトルエンディアンでは `位置 = メンバ位置*8 + 格納単位ビット数 - bit_offset - bit_size` の変換が必要で, この変換でコンパイラの正解と一致した。"
+    ],
+    "v4": [
+      "**ビットフィールド**: 旧形式の `DW_AT_bit_offset` (格納単位の MSB から数える) が使われる。リトルエンディアンでは `位置 = メンバ位置*8 + 格納単位ビット数 - bit_offset - bit_size` の変換が必要で, この変換でコンパイラの正解と一致した。"
+    ],
+    "v5": [
+      "**ビットフィールド**: `DW_AT_data_bit_offset` (構造体先頭からの LSB 基準のビット位置) が使われ, そのまま位置が決まる。"
+    ]
+  }
+}
